@@ -9,11 +9,6 @@ import sigfig  # module "sigfig" requires $ pip install sigfig
 import numpy as np
 
 
-# Do not display the warning that only appears in the .exe
-warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
-                        category=UserWarning)  # deprecation warning inherits from UserWarning
-
-
 # Allow creation of multiple trusses
 class ClassIter(type):
     """
@@ -110,8 +105,9 @@ class Truss(metaclass=ClassIter):
             """
             Calculates the cross-sectional area of this bar (using databook formula).
             """
-            self.A = (self.b ** 2 - (self.b - self.t) ** 2) * 1.03
+            self.section_area = (self.b ** 2 - (self.b - self.t) ** 2) * 1.03
             # 1.03 is a fudge factor to average between calculated and datasheet values
+            return self.section_area
 
         def effective_area(self):
             """
@@ -566,7 +562,7 @@ def create_joint(truss: object, var_name: str, joint_name: str, x: float, y: flo
 def create_bar(truss: object, var_name: str, bar_name: str, first_joint_var_name: str,
                second_joint_var_name: str, params: dict = None, print_info=False):
     """
-    Create an instance of a bar in a truss, with a user defined name bar_name,,
+    Create an instance of a bar in a truss, with a user defined name bar_name,
     stored internally as var_name, between two joints with string names, with bar_params.
     """
 
@@ -587,6 +583,7 @@ def create_load(truss: object, var_name: str, load_name: str,
     Create an instance of a load in a truss, with a user defined name load_name,
     stored internally as var_name, at joint string joint_var_name, with components (x, y).
     """
+
     if validate_var_name(var_name):
         globals()[var_name] = truss.Load(load_name, globals()[joint_var_name], x, y)
 
@@ -602,14 +599,15 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
     Create an instance of a support in a truss, with a user defined name support_name,
     stored internally as var_name, at joint variable name string joint_var_name.
     """
-    if validate_var_name(var_name):
-        globals()[var_name] = truss.Support(truss, support_name,
-                                            globals()[joint_var_name], support_type, direction)
 
     if print_info:
         print(f'The support with name "{globals()[var_name].name}", internally stored as "{var_name}", '
         f'has been applied at joint named {globals()[joint_var_name].name}, internally stored as "{joint_var_name}", '
         f'with type "{support_type}" in direction {direction}.')
+        
+    if validate_var_name(var_name):
+        globals()[var_name] = truss.Support(truss, support_name,
+                                            globals()[joint_var_name], support_type, direction)
 
 
 """---------------------------------------------------------------------------------------"""
@@ -618,18 +616,23 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
     ##########################################
 """---------------------------------------------------------------------------------------"""
 
-if __name__ == "__main__":
+'''
+#  Fix issue with warning appearing when run from .exe
+warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
+                                category=UserWarning)  # deprecation warning inherits from UserWarning
+'''
 
-    # Define some custom bar parameters and initialise the truss
-    custom_params = {"b": 12.5, "t": 0.7, "D": 5, "E": 210, "strength_max": 0.216}
-    myTruss = Truss(custom_params, 'kN, mm')
+if __name__ == "__main__":
 
     # Define some example bar parameters, four choices of bar
     weak = {"b": 12.5, "t": 0.7, "D": 5, "E": 210, "strength_max": 0.216}
     medium_1 = {"b": 16, "t": 0.9, "D": 5, "E": 210, "strength_max": 0.216}
     medium_2 = {"b": 16, "t": 1.1, "D": 5, "E": 210, "strength_max": 0.216}
     strong = {"b": 19, "t": 1.1, "D": 5, "E": 210, "strength_max": 0.216}
+
+    # Define some custom bar parameters and initialise the truss
     custom_params = weak
+    myTruss = Truss(custom_params, 'kN, mm')
 
     # Step 1. Create the joints
     create_joint(myTruss, 'joint_a', 'Joint A', 0, 0)
