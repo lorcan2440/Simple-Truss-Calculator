@@ -1,6 +1,6 @@
 """
 2D Truss Calculator
-Version 1.3
+Version 1.4
 """
 
 from matplotlib import pyplot as plt
@@ -15,56 +15,26 @@ warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
 
 
 # Allow creation of multiple trusses
-class IterTruss(type):
+class ClassIter(type):
     """
-     For reference see
-     https://codereview.stackexchange.com/questions/126100/recording-all-instances-of-a-class-python/225775
-     """
-
+    A helper metaclass to support iteration over class instances. For reference see
+    https://codereview.stackexchange.com/questions/126100/recording-all-instances-of-a-class-python
+    https://stackoverflow.com/questions/28676399/iteration-over-class-instances-using-iter
+    """
     def __iter__(cls):
-        return iter(cls._allTrusses)
+        return iter(cls._ClassRegistry)
+
+    def __len__(cls):
+        return len(cls._ClassRegistry)   
 
 
 # MAIN CLASS FOR TRUSSES
 
-class Truss(metaclass=IterTruss):
+class Truss(metaclass=ClassIter):
     """
     A class containing the truss to be worked with.
     """
-    _allTrusses = []
-
-    # Metaclasses for each part of the truss, allows iteration
-    class IterJoint(type):
-        """
-        Helper class to iterate over the joints in the truss.
-        """
-
-        def __iter__(cls):
-            return iter(cls._allJoints)
-
-    class IterBar(type):
-        """
-        Helper class to iterate over the bars in the truss.
-        """
-
-        def __iter__(cls):
-            return iter(cls._allBars)
-
-    class IterLoad(type):
-        """
-        Helper class to iterate over the loads in the truss.
-        """
-
-        def __iter__(cls):
-            return iter(cls._allLoads)
-
-    class IterSupport(type):
-        """
-        Helper class to iterate over the supports in the truss.
-        """
-
-        def __iter__(cls):
-            return iter(cls._allSupports)
+    _ClassRegistry = []
 
     def __init__(self, bar_params: dict = None, units='kN, mm'):
         """
@@ -72,7 +42,7 @@ class Truss(metaclass=IterTruss):
         and the default properties (thickness, modulus etc) which
         bars will have when added.
         """
-        self._allTrusses.append(self)  # add the new truss object to the list of trusses
+        self._ClassRegistry.append(self)  # add the new truss object to the list of trusses
         if bar_params is None:  # set the units that the calculations should be done in
             if units == 'N, m':
                 self.default_params = {"b": 0.016, "t": 0.004, "D": 0.020,
@@ -87,28 +57,28 @@ class Truss(metaclass=IterTruss):
 
     # PARTS OF THE TRUSS (INNER CLASSES)
 
-    class Joint(metaclass=IterJoint):
+    class Joint(metaclass=ClassIter):
         """
           Joints define the locations where other objects can go.
           Bars go between two joints.
           Each joint can have loads and supports applied.
           """
-        _allJoints = []
+        _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, x: float, y: float):
-            self._allJoints.append(self)
+            self._ClassRegistry.append(self)
             self.name = name
             self.truss = truss
             self.x = x
             self.y = y
             self.loads = {}
 
-    class Bar(metaclass=IterBar):
+    class Bar(metaclass=ClassIter):
         """
           Bars go between the first_joint and the second_joint.
           Each bar can have different thickness, strength etc in my_params.
           """
-        _allBars = []
+        _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, first_joint: object, second_joint: object,
                      my_params: dict = None):
@@ -116,7 +86,7 @@ class Truss(metaclass=IterTruss):
             Initialise a bar with a given name, which joints it should connect between, and
             its physical properties.
             """
-            self._allBars.append(self)
+            self._ClassRegistry.append(self)
             self.name = name
             self.first_joint, self.first_joint_name = first_joint, first_joint.name
             self.second_joint, self.second_joint_name = second_joint, second_joint.name
@@ -158,20 +128,20 @@ class Truss(metaclass=IterTruss):
             self.buckling_ratio = self.length() / self.b
             return self.buckling_ratio
 
-    class Load(metaclass=IterLoad):
+    class Load(metaclass=ClassIter):
         """
           Loads can be applied at any joint.
           Their components are specified as (x_comp, y_comp)
           aligned with the coordinate system used to define the joints.
           """
-        _allLoads = []
+        _ClassRegistry = []
 
         def __init__(self, name: str, joint: object, x_comp: float = 0.0, y_comp: float = 0.0):
             """
             Initialise a load with a name, a joint to be applied at, and a force value in terms
             of x and y components (as defined by the coordinate and unit systems).
             """
-            self._allLoads.append(self)
+            self._ClassRegistry.append(self)
             self.name = name
             self.joint = joint
             self.x, self.y = x_comp, y_comp
@@ -179,11 +149,11 @@ class Truss(metaclass=IterTruss):
             self.direction = math.atan2(self.y, self.x)
             joint.loads[self.name] = (self.x, self.y)
 
-    class Support(metaclass=IterSupport):
+    class Support(metaclass=ClassIter):
         """
         Supports are points from which external reaction forces can be applied.
         """
-        _allSupports = []
+        _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, joint: object, support_type: str = 'encastre',
                      roller_normal_vector: tuple = (1, 0)):
@@ -191,7 +161,7 @@ class Truss(metaclass=IterTruss):
             Initialise a support with a name, a joint object to convert to a support, the type of support
             and a direction if a roller joint is chosen.
             """
-            self._allSupports.append(self)
+            self._ClassRegistry.append(self)
 
             self.name = name
             self.joint = joint
@@ -377,17 +347,17 @@ class Truss(metaclass=IterTruss):
                 constants[i] = [0]
 
         # Solve the system
-        M, B = np.matrix(np.array(coefficients)), np.matrix(constants)
-        X = np.linalg.inv(M) * B
+        m, b = np.matrix(np.array(coefficients)), np.matrix(constants)
+        x = np.linalg.inv(m) * b
 
         # Match values back to variable names and return
         output_dict = {}
         for i, bar in enumerate(self.get_all_bars()):
-            output_dict[bar.name] = float(X[i])
+            output_dict[bar.name] = float(x[i])
         else:
             _i = i
         for support in self.get_all_supports():
-            output_dict[support.name] = (float(X[_i]), float(X[_i + 1]))
+            output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
             _i += 2
         return output_dict
 
@@ -686,16 +656,16 @@ if __name__ == "__main__":
     create_support(myTruss, 'support_a', 'Support A', 'joint_a', 'encastre')
     create_support(myTruss, 'support_e', 'Support E', 'joint_e', 'encastre')
 
-    try: # Get the results of the truss calculation and display graphic
+    try:  # Get the results of the truss calculation and display graphic
         my_results = myTruss.Result(myTruss, sig_figs=3)
         print(my_results)
-    except np.linalg.LinAlgError: # The truss was badly made, so could not be solved
+    except np.linalg.LinAlgError:  # The truss was badly made, so could not be solved
         valid = myTruss.is_statically_determinate()
         if not valid:
             raise ArithmeticError('''The truss is not statically determinate. 
               It cannot be solved. \nBars: {}\nReactions: {}\nJoints: {}'''.format(
                 myTruss.b, myTruss.F, myTruss.j))
-        else: # Some other issue occured. May require attention to the code.
+        else:  # Some other issue occured. May require attention to the code.
             raise Exception("Something else went wrong. Couldn't identify the problem.")
 
     plot_diagram(myTruss, my_results, show_reactions=True)
