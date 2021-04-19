@@ -4,9 +4,10 @@ Version 1.4
 """
 
 from matplotlib import pyplot as plt
-import math, keyword, os, warnings  # builtin modules
+import math, keyword, os, warnings, sys  # builtin modules
 import sigfig  # module "sigfig" requires $ pip install sigfig
 import numpy as np
+from scipy.sparse.linalg import spsolve
 
 
 # Allow creation of multiple trusses
@@ -20,7 +21,7 @@ class ClassIter(type):
         return iter(cls._ClassRegistry)
 
     def __len__(cls):
-        return len(cls._ClassRegistry)   
+        return len(cls._ClassRegistry)
 
 
 # MAIN CLASS FOR TRUSSES
@@ -61,8 +62,12 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, x: float, y: float):
-            self._ClassRegistry.append(self)
+
             self.name = name
+
+            if not self.name in [i.name for i in self._ClassRegistry]:
+                self._ClassRegistry.append(self)
+    
             self.truss = truss
             self.x = x
             self.y = y
@@ -81,8 +86,13 @@ class Truss(metaclass=ClassIter):
             Initialise a bar with a given name, which joints it should connect between, and
             its physical properties.
             """
-            self._ClassRegistry.append(self)
+
             self.name = name
+
+            if not self.name in [i.name for i in self._ClassRegistry]:
+                self._ClassRegistry.append(self)
+            
+            self.truss = truss
             self.first_joint, self.first_joint_name = first_joint, first_joint.name
             self.second_joint, self.second_joint_name = second_joint, second_joint.name
             if my_params is None:
@@ -93,7 +103,7 @@ class Truss(metaclass=ClassIter):
             self.b, self.t, self.D, self.E, self.strength_max = self.params["b"], self.params["t"], \
                 self.params["D"], self.params["E"], self.params["strength_max"]
 
-        def length(self):
+        def get_length(self):
             """
             Calculates the length of this bar.
             """
@@ -101,7 +111,7 @@ class Truss(metaclass=ClassIter):
                 (self.first_joint.x - self.second_joint.x) ** 2 + (self.first_joint.y - self.second_joint.y) ** 2)
             return self.L
 
-        def area(self):
+        def get_area(self):
             """
             Calculates the cross-sectional area of this bar (using databook formula).
             """
@@ -109,7 +119,7 @@ class Truss(metaclass=ClassIter):
             # 1.03 is a fudge factor to average between calculated and datasheet values
             return self.section_area
 
-        def effective_area(self):
+        def get_effective_area(self):
             """
             Calculates the effective area over which axial loads are carried, due to localised
             Von Mises stress near the connection.
@@ -117,12 +127,31 @@ class Truss(metaclass=ClassIter):
             self.A_eff = (1.5 * self.b - self.D) * 0.9 * self.t
             return self.A_eff
 
-        def buckling_ratio(self):
+        def get_buckling_ratio(self):
             """
             Calculates the characteristic aspect ratio used in the buckling graph in the databook.
             """
-            self.buckling_ratio = self.length() / self.b
+            self.buckling_ratio = self.get_length() / self.b
             return self.buckling_ratio
+
+        def get_direction(self, origin_joint: object):
+            """
+            Calculates the (polar, in radians) angle this bar makes with the horizontal, 
+            with the origin taken as the origin_joint. 0 = horizontal right, +pi/2 = vertical up, 
+            -pi/2 = vertical down, pi = horizontal left, etc. (-pi < angle <= pi).
+            """
+            connected_joints = self.truss.get_all_joints_connected_to_bar(self)
+            if origin_joint == connected_joints[0]:
+                angle = math.atan2(connected_joints[1].y - origin_joint.y,
+                                    connected_joints[1].x - origin_joint.x)
+            elif origin_joint == connected_joints[1]:
+                angle = math.atan2(connected_joints[0].y - origin_joint.y, 
+                                    connected_joints[0].x - origin_joint.x)
+            else:
+                raise LookupError(f'The bar "{self.name}" appears to be not attached to a joint at both its ends.')
+
+            self.angle = angle
+            return angle
 
     class Load(metaclass=ClassIter):
         """
@@ -137,8 +166,12 @@ class Truss(metaclass=ClassIter):
             Initialise a load with a name, a joint to be applied at, and a force value in terms
             of x and y components (as defined by the coordinate and unit systems).
             """
-            self._ClassRegistry.append(self)
+
             self.name = name
+
+            if not self.name in [i.name for i in self._ClassRegistry]:
+                self._ClassRegistry.append(self)
+
             self.joint = joint
             self.x, self.y = x_comp, y_comp
             self.magnitude = math.sqrt(self.x ** 2 + self.y ** 2)
@@ -157,9 +190,12 @@ class Truss(metaclass=ClassIter):
             Initialise a support with a name, a joint object to convert to a support, the type of support
             and a direction if a roller joint is chosen.
             """
-            self._ClassRegistry.append(self)
 
             self.name = name
+
+            if not self.name in [i.name for i in self._ClassRegistry]:
+                self._ClassRegistry.append(self)
+            
             self.joint = joint
             self.type = support_type
             self.dir = roller_normal_vector
@@ -175,8 +211,8 @@ class Truss(metaclass=ClassIter):
     # TRUSS METHODS
 
     '''
-     Returns all objects of a given type by their name or object reference.
-     '''
+    Returns all objects of a given type by their name or object reference.
+    '''
 
     def get_all_bars(self, str_names_only: bool = False):
         """
@@ -256,8 +292,7 @@ class Truss(metaclass=ClassIter):
         self.j = len(self.get_all_joints(str_names_only=True))
         return self.b + self.F == 2 * self.j
 
-    def calculate(self):
-
+    def calculate(self, solution_method="NUMPY.STANDARD"):
         """
         The main part of the program. Calculates the forces in the truss's bars and supports
         in order to maintain force equilibrium with the given loads. Outputs as a dictionary in the form
@@ -265,29 +300,14 @@ class Truss(metaclass=ClassIter):
         """
         # Get a list of the distinct joint names, number of equations to form = 2 * number of joints
         joint_names = self.get_all_joints(str_names_only=True)
-        number_of_unknowns = 2 * len(joint_names)
 
         # List of dictionaries for unknowns, given default zero values
-        unknowns = {}
         wanted_vars = []
         for bar in self.get_all_bars():
-            unknowns['Tension in ' + bar.name] = 0
             wanted_vars.append('Tension in ' + bar.name)
         for support in self.get_all_supports():
-            unknowns['Horizontal reaction at ' + support.name] = 0
             wanted_vars.append('Horizontal reaction at ' + support.joint.name)
-            unknowns['Vertical reaction at ' + support.name] = 0
             wanted_vars.append('Vertical reaction at ' + support.joint.name)
-
-        unknowns = [unknowns for _ in range(number_of_unknowns)]
-
-        # Create a list of joint names, with each entry included twice and then flatten the list
-        joint_enum = [item for sublist in zip(joint_names, joint_names) for item in sublist]
-
-        # Create empty dictionary of all equations in all unknowns
-        unknowns = {"Equation {}, resolve {} at {}".format(
-            x + 1, 'horizontally' if (x + 1) % 2 == 1 else 'vertically',
-            joint_enum[x]): unknowns[x] for x in range(number_of_unknowns)}
 
         all_directions = {}
         for joint in self.get_all_joints():
@@ -297,14 +317,7 @@ class Truss(metaclass=ClassIter):
 
             # Get the anticlockwise (polar) angle of each connected joint relative to this joint which have bars
             for bar in connected_bars:
-                connected_joints = self.get_all_joints_connected_to_bar(bar)
-                if joint == connected_joints[0]:
-                    angle = math.atan2(connected_joints[1].y - joint.y, connected_joints[1].x - joint.x)
-                elif joint == connected_joints[1]:
-                    angle = math.atan2(connected_joints[0].y - joint.y, connected_joints[0].x - joint.x)
-                else:
-                    raise LookupError(f'The bar "{bar.name}" appears to be not attached to a joint at both its ends.')
-
+                angle = bar.get_direction(joint)
                 directions['Tension in ' + bar.name] = angle
 
             # If there are reactions at this joint, store their directions too
@@ -341,10 +354,18 @@ class Truss(metaclass=ClassIter):
         for i in range(len(constants)):
             if constants[i] == [] or constants[i] == [None]:
                 constants[i] = [0]
-
-        # Solve the system
-        m, b = np.matrix(np.array(coefficients)), np.matrix(constants)
-        x = np.linalg.inv(m) * b
+        
+        # Solve the system - using this was (surprisingly) faster than using both np.linalg.solve() 
+        # and scipy.sparse.linalg.spsolve(). May need to do more rigorous testing to check if this is really true.
+        _method_parse = solution_method.split('.')
+        if _method_parse[0] == "NUMPY":
+            m, b = np.matrix(np.array(coefficients)), np.matrix(constants)
+            if _method_parse[1] == "STANDARD":
+                x = np.linalg.inv(m) * b
+            elif _method_parse[1] == "SOLVE":
+                x = np.linalg.solve(m, b)
+        elif _method_parse[0] == "SCIPY":
+            x = scipy.sparse.linalg.spsolve(coefficients, constants)
 
         # Match values back to variable names and return
         output_dict = {}
@@ -355,23 +376,46 @@ class Truss(metaclass=ClassIter):
         for support in self.get_all_supports():
             output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
             _i += 2
+
+        # For whatever reason, sometimes the reaction forces are wrong. Correct them here
+        for support in self.get_all_supports():
+
+            reaction_corrected = [0, 0]
+            for bar in self.get_all_bars_connected_to_joint(support.joint):
+                angle = bar.get_direction(support.joint)
+                reaction_corrected[0] -= output_dict[bar.name] * math.cos(angle)
+                reaction_corrected[1] -= output_dict[bar.name] * math.sin(angle)
+
+            output_dict[support.name] = (reaction_corrected[0], reaction_corrected[1])
+                
         return output_dict
+
+    def _delete_truss(self):
+        """
+        Delete the truss and clear the _ClassRegistry when the calculation for a truss 
+        is done. Required to prevent the _ClassRegistry adding duplicate objects.
+        """
+        _ClassRegistry = []
+        self.Joint._ClassRegistry, self.Bar._ClassRegistry, self.Support._ClassRegistry, self.Load._ClassRegistry = [], [], [], []
+
 
     # TRUSS RESULTS CLASS
 
     class Result:
         """
-          Allows the results to be analysed and manipulated.
-          """
+        Allows the results to be analysed and manipulated.
+        """
 
-        def __init__(self, truss, sig_figs=None):
+        def __init__(self, truss, sig_figs=None, solution_method="NUMPY.STANDARD", delete_truss_after=False):
             self.truss = truss
-            self.results = truss.calculate()
+            self.results = truss.calculate(solution_method=solution_method)
             self.tensions, self.reactions, self.stresses, self.strains, self.buckling_ratios = {}, {}, {}, {}, {}
             self.sig_figs = sig_figs
             warnings.filterwarnings('ignore')
             self.get_data(truss)
             self.round_data()
+            if delete_truss_after:
+                truss._delete_truss()
 
         def __repr__(self):
             repr_str = f'\n Axial forces are: (positive = tension; negative = compression) \n \t {str(self.tensions)}'
@@ -415,24 +459,27 @@ class Truss(metaclass=ClassIter):
                         self.tensions.update({item: 0})
                     else:
                         self.tensions.update({item: self.results[item]})
-                    self.stresses.update({item: self.tensions[item] / truss.get_bar_by_name(item).effective_area()})
+                    self.stresses.update({item: self.tensions[item] / truss.get_bar_by_name(item).get_effective_area()})
                     self.strains.update({item: self.stresses[item] / truss.get_bar_by_name(item).E})
                     if self.results[item] < 0:
-                        self.buckling_ratios.update({item: truss.get_bar_by_name(item).buckling_ratio()})
+                        self.buckling_ratios.update({item: truss.get_bar_by_name(item).get_buckling_ratio()})
                 elif isinstance(self.results[item], tuple):
+                    self.results[item] = tuple(map(lambda x: round(x, self.sig_figs), self.results[item]))
                     self.reactions.update({item: self.results[item]})
+                else:
+                    raise TypeError('An internal error occured.')
 
 
 # TRUSS INNER CLASSES END HERE, MAIN RESULTS FUNCTIONS START HERE
 
-def plot_diagram(truss: object, results: object, show_reactions=False):
+def plot_diagram(truss: object, results: object, show_reactions=False, delete_truss_after=True):
     """
      Create a matplotlib output image showing the truss geometry,
      annotated with arrows and labels.
      """
 
     # Find a suitable length-scale to make the annotations look nicer
-    arrow_sizes = [x.length() for x in truss.get_all_bars()]
+    arrow_sizes = [x.get_length() for x in truss.get_all_bars()]
     arrow_sizes = sum(arrow_sizes) / len(arrow_sizes) * 0.1
 
     # Plot all joints
@@ -481,6 +528,10 @@ def plot_diagram(truss: object, results: object, show_reactions=False):
                  sum([load.joint.y + load.joint.y, arrow_sizes * math.sin(direction_of_load)]) / 2,
                  f'{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units.split(",")[0]}')
 
+    # Delete the truss registry to avoid issues if building another truss
+    if delete_truss_after:
+        truss._delete_truss()
+
     # Graphical improvements
     plt.legend(loc='upper right')
     plt.autoscale()
@@ -493,7 +544,7 @@ def plot_diagram(truss: object, results: object, show_reactions=False):
 
 # HELPER FUNCTIONS BEGIN HERE
 
-def validate_var_name(var_name: str):
+def validate_var_name(var_name: str, allow_existing_vars=True):
     """
     Checks if a var_name, which is used internally to instantiate the
     subclass objects (Joint, Bars, Load, Support). They are set using
@@ -501,7 +552,7 @@ def validate_var_name(var_name: str):
     the value.
     """
 
-    if var_name in globals():
+    if var_name in globals() and not allow_existing_vars:
         raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already in use.'
                         f'It cannot be used in the truss.')
     elif not var_name.isidentifier() or keyword.iskeyword(var_name):
@@ -599,15 +650,15 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
     Create an instance of a support in a truss, with a user defined name support_name,
     stored internally as var_name, at joint variable name string joint_var_name.
     """
+        
+    if validate_var_name(var_name):
+        globals()[var_name] = truss.Support(truss, support_name,
+                                            globals()[joint_var_name], support_type, direction)
 
     if print_info:
         print(f'The support with name "{globals()[var_name].name}", internally stored as "{var_name}", '
         f'has been applied at joint named {globals()[joint_var_name].name}, internally stored as "{joint_var_name}", '
         f'with type "{support_type}" in direction {direction}.')
-        
-    if validate_var_name(var_name):
-        globals()[var_name] = truss.Support(truss, support_name,
-                                            globals()[joint_var_name], support_type, direction)
 
 
 """---------------------------------------------------------------------------------------"""
@@ -623,6 +674,8 @@ warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
 '''
 
 if __name__ == "__main__":
+
+    # -- An example truss --
 
     # Define some example bar parameters, four choices of bar
     weak = {"b": 12.5, "t": 0.7, "D": 5, "E": 210, "strength_max": 0.216}
@@ -660,7 +713,7 @@ if __name__ == "__main__":
     create_support(myTruss, 'support_e', 'Support E', 'joint_e', 'encastre')
 
     try:  # Get the results of the truss calculation and display graphic
-        my_results = myTruss.Result(myTruss, sig_figs=3)
+        my_results = myTruss.Result(myTruss, sig_figs=3, solution_method="NUMPY.STANDARD")
         print(my_results)
     except np.linalg.LinAlgError:  # The truss was badly made, so could not be solved
         valid = myTruss.is_statically_determinate()
