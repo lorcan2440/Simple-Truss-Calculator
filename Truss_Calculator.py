@@ -3,11 +3,24 @@
 Version 1.4
 """
 
-from matplotlib import pyplot as plt
-import math, keyword, os, warnings, sys  # builtin modules
-import sigfig  # module "sigfig" requires $ pip install sigfig
-import numpy as np
-from scipy.sparse.linalg import spsolve
+import math, keyword, os, warnings, subprocess, sys     # builtin modules
+
+# Automatically install missing modules, least likely to be already installed first
+try:
+    import sigfig                                       # required for rounding values nicely
+    from scipy.sparse import linalg, csr_matrix         # used for faster solving
+    from matplotlib import pyplot as plt                # used to display graphical output
+    import numpy as np                                  # used to do matrix operations
+
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "sigfig", "scipy", "numpy", "matplotlib"])
+    print(' \t ~~ All dependencies succesfully installed. ~~ \n\n')
+
+finally:
+    import numpy as np
+    from matplotlib import pyplot as plt
+    from scipy.sparse import linalg, csr_matrix
+    import sigfig
 
 
 # Allow creation of multiple trusses
@@ -87,52 +100,22 @@ class Truss(metaclass=ClassIter):
             its physical properties.
             """
 
-            self.name = name
+            self.name = name  # The user-defined name
 
-            if not self.name in [i.name for i in self._ClassRegistry]:
-                self._ClassRegistry.append(self)
+            if not self.name in [i.name for i in self._ClassRegistry]:  # Register this bar instance if its name has
+                self._ClassRegistry.append(self)                        # not already been registered
             
-            self.truss = truss
-            self.first_joint, self.first_joint_name = first_joint, first_joint.name
-            self.second_joint, self.second_joint_name = second_joint, second_joint.name
-            if my_params is None:
-                self.params = truss.default_params
-            else:
-                self.params = my_params
+            self.truss = truss  # the class which this bar belongs to
+            self.first_joint, self.first_joint_name = first_joint, first_joint.name         # the object and name of the first and
+            self.second_joint, self.second_joint_name = second_joint, second_joint.name     # secondjoint this bar is connected
+            self.params = truss.default_params if my_params is None else my_params  # take the truss's default if bar not given any
 
-            self.b, self.t, self.D, self.E, self.strength_max = self.params["b"], self.params["t"], \
-                self.params["D"], self.params["E"], self.params["strength_max"]
-
-        def get_length(self):
-            """
-            Calculates the length of this bar.
-            """
-            self.L = math.sqrt(
-                (self.first_joint.x - self.second_joint.x) ** 2 + (self.first_joint.y - self.second_joint.y) ** 2)
-            return self.L
-
-        def get_area(self):
-            """
-            Calculates the cross-sectional area of this bar (using databook formula).
-            """
+            # physical and geometric properties of the bar, as defined in databook
+            [setattr(self, attr, self.params[attr]) for attr in ["b", "t", "D", "E", "strength_max"]]
+            self.length = math.sqrt((self.first_joint.x - self.second_joint.x)**2 + (self.first_joint.y - self.second_joint.y)**2)
             self.section_area = (self.b ** 2 - (self.b - self.t) ** 2) * 1.03
-            # 1.03 is a fudge factor to average between calculated and datasheet values
-            return self.section_area
-
-        def get_effective_area(self):
-            """
-            Calculates the effective area over which axial loads are carried, due to localised
-            Von Mises stress near the connection.
-            """
-            self.A_eff = (1.5 * self.b - self.D) * 0.9 * self.t
-            return self.A_eff
-
-        def get_buckling_ratio(self):
-            """
-            Calculates the characteristic aspect ratio used in the buckling graph in the databook.
-            """
-            self.buckling_ratio = self.get_length() / self.b
-            return self.buckling_ratio
+            self.effective_area = (1.5 * self.b - self.D) * 0.9 * self.t
+            self.buckling_ratio = self.length / self.b
 
         def get_direction(self, origin_joint: object):
             """
@@ -150,7 +133,6 @@ class Truss(metaclass=ClassIter):
             else:
                 raise LookupError(f'The bar "{self.name}" appears to be not attached to a joint at both its ends.')
 
-            self.angle = angle
             return angle
 
     class Load(metaclass=ClassIter):
@@ -174,9 +156,9 @@ class Truss(metaclass=ClassIter):
 
             self.joint = joint
             self.x, self.y = x_comp, y_comp
-            self.magnitude = math.sqrt(self.x ** 2 + self.y ** 2)
-            self.direction = math.atan2(self.y, self.x)
-            joint.loads[self.name] = (self.x, self.y)
+            self.magnitude = math.sqrt(self.x ** 2 + self.y ** 2)  # magnitude of the force
+            self.direction = math.atan2(self.y, self.x)  # direction of the force clockwise from the positive x-axis
+            joint.loads[self.name] = (self.x, self.y)  # add this load's components to the joint's dict attribute
 
     class Support(metaclass=ClassIter):
         """
@@ -292,6 +274,14 @@ class Truss(metaclass=ClassIter):
         self.j = len(self.get_all_joints(str_names_only=True))
         return self.b + self.F == 2 * self.j
 
+    def _delete_truss(self):
+        """
+        Delete the truss and clear the _ClassRegistry when the calculation for a truss 
+        is done. Required to prevent the _ClassRegistry adding duplicate objects.
+        """
+        _ClassRegistry = []
+        self.Joint._ClassRegistry, self.Bar._ClassRegistry, self.Support._ClassRegistry, self.Load._ClassRegistry = [], [], [], []
+
     def calculate(self, solution_method="NUMPY.STANDARD"):
         """
         The main part of the program. Calculates the forces in the truss's bars and supports
@@ -355,19 +345,18 @@ class Truss(metaclass=ClassIter):
             if constants[i] == [] or constants[i] == [None]:
                 constants[i] = [0]
         
-        # Solve the system - using this was (surprisingly) faster than using both np.linalg.solve() 
-        # and scipy.sparse.linalg.spsolve(). May need to do more rigorous testing to check if this is really true.
+        # Solve the system - both coefficient and constant matrices are sparse so ideally the SCIPY method is faster.
         _method_parse = solution_method.split('.')
         if _method_parse[0] == "NUMPY":
-            m, b = np.matrix(np.array(coefficients)), np.matrix(constants)
+            m, b = np.matrix(coefficients), np.matrix(constants)
             if _method_parse[1] == "STANDARD":
                 x = np.linalg.inv(m) * b
             elif _method_parse[1] == "SOLVE":
                 x = np.linalg.solve(m, b)
         elif _method_parse[0] == "SCIPY":
-            x = scipy.sparse.linalg.spsolve(coefficients, constants)
+            x = linalg.spsolve(csr_matrix(coefficients), csr_matrix(constants))
 
-        # Match values back to variable names and return
+        # Match values back to variable names
         output_dict = {}
         for i, bar in enumerate(self.get_all_bars()):
             output_dict[bar.name] = float(x[i])
@@ -377,9 +366,8 @@ class Truss(metaclass=ClassIter):
             output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
             _i += 2
 
-        # For whatever reason, sometimes the reaction forces are wrong. Correct them here
+        # For whatever reason, sometimes the reaction forces are wrong. Correct them here by resolving at the supports
         for support in self.get_all_supports():
-
             reaction_corrected = [0, 0]
             for bar in self.get_all_bars_connected_to_joint(support.joint):
                 angle = bar.get_direction(support.joint)
@@ -387,16 +375,9 @@ class Truss(metaclass=ClassIter):
                 reaction_corrected[1] -= output_dict[bar.name] * math.sin(angle)
 
             output_dict[support.name] = (reaction_corrected[0], reaction_corrected[1])
-                
+        
+        # Return the values in dict form
         return output_dict
-
-    def _delete_truss(self):
-        """
-        Delete the truss and clear the _ClassRegistry when the calculation for a truss 
-        is done. Required to prevent the _ClassRegistry adding duplicate objects.
-        """
-        _ClassRegistry = []
-        self.Joint._ClassRegistry, self.Bar._ClassRegistry, self.Support._ClassRegistry, self.Load._ClassRegistry = [], [], [], []
 
 
     # TRUSS RESULTS CLASS
@@ -459,10 +440,10 @@ class Truss(metaclass=ClassIter):
                         self.tensions.update({item: 0})
                     else:
                         self.tensions.update({item: self.results[item]})
-                    self.stresses.update({item: self.tensions[item] / truss.get_bar_by_name(item).get_effective_area()})
+                    self.stresses.update({item: self.tensions[item] / truss.get_bar_by_name(item).effective_area})
                     self.strains.update({item: self.stresses[item] / truss.get_bar_by_name(item).E})
                     if self.results[item] < 0:
-                        self.buckling_ratios.update({item: truss.get_bar_by_name(item).get_buckling_ratio()})
+                        self.buckling_ratios.update({item: truss.get_bar_by_name(item).buckling_ratio})
                 elif isinstance(self.results[item], tuple):
                     self.results[item] = tuple(map(lambda x: round(x, self.sig_figs), self.results[item]))
                     self.reactions.update({item: self.results[item]})
@@ -478,8 +459,8 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
      annotated with arrows and labels.
      """
 
-    # Find a suitable length-scale to make the annotations look nicer
-    arrow_sizes = [x.get_length() for x in truss.get_all_bars()]
+    # Find a suitable length-scale to make the annotations look nicer - 10% of the average length of the bars
+    arrow_sizes = [x.length for x in truss.get_all_bars()]
     arrow_sizes = sum(arrow_sizes) / len(arrow_sizes) * 0.1
 
     # Plot all joints
@@ -566,22 +547,21 @@ def plt_set_fullscreen(plt):
     """
     Automatically set the matplotlib output to fullscreen.
     """
-    try:
-        backend = str(plt.get_backend())
-        mgr = plt.get_current_fig_manager()
-        if backend == 'TkAgg':
-            if os.name == 'nt':
-                mgr.window.state('zoomed')
-            else:
-                mgr.resize(*mgr.window.maxsize())
-        elif backend == 'wxAgg':
-            mgr.frame.Maximize(True)
-        elif backend == 'Qt4Agg':
-            mgr.window.showMaximized()
+
+    backend = str(plt.get_backend())
+    mgr = plt.get_current_fig_manager()
+    if backend == 'TkAgg':
+        if os.name == 'nt':
+            mgr.window.state('zoomed')
         else:
-            raise EnvironmentError(f'The backend in use, {backend}, is not supported in fullscreen mode.')
-    except BaseException:
-        pass
+            mgr.resize(*mgr.window.maxsize())
+    elif backend == 'wxAgg':
+        mgr.frame.Maximize(True)
+    elif backend in ['Qt4Agg', 'Qt5Agg']:
+        mgr.window.showMaximized()
+    else:
+        raise EnvironmentError(f'The backend in use, {backend}, is not supported in fullscreen mode.')
+
 
 
 # OBJECT BUILDERS BEGIN HERE

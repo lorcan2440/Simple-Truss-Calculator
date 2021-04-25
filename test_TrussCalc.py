@@ -22,7 +22,7 @@ def build_truss(truss, joints: tuple[tuple], bars: tuple[tuple], loads: tuple[tu
 def solve_truss(truss, show_outputs=True):
 
     try:
-        my_results = truss.Result(truss, sig_figs=3, solution_method="NUMPY.STANDARD", delete_truss_after=not show_outputs)
+        my_results = truss.Result(truss, sig_figs=3, solution_method="SCIPY", delete_truss_after=not show_outputs)
         if show_outputs:
             print(my_results)
             t.plot_diagram(truss, my_results, show_reactions=False)
@@ -49,7 +49,7 @@ def set_constants(run_test_case):
         strong =            {"b": 19,   "t": 1.1,   "D": 5,   "E": 210,     "strength_max": 0.216}
         truss, joints, bars, loads, supports = run_test_case()
         build_truss(truss, joints, bars, loads, supports)
-        solve_truss(truss, show_outputs=True)
+        solve_truss(truss, show_outputs=False)
     return wrapper
 
 
@@ -73,12 +73,8 @@ def test_case_2():
     return truss, joints, bars, loads, supports
 
 
-'''
 time = timeit.timeit(test_case_1, number=1000)
 print(time)
-time = timeit.timeit(test_case_2, number=1000)
-print(time)
-'''
 
 test_case_1()
 test_case_2()
