@@ -2,8 +2,7 @@
 2D Truss Calculator
 Version 1.4
 """
-
-import math, keyword, os, warnings, subprocess, sys, re
+import math, warnings
 from functools import total_ordering                    # builtin modules
 
 # Automatically install missing modules, least likely to be already installed first
@@ -14,6 +13,7 @@ try:
     import numpy as np                                  # used to do matrix operations
 
 except ImportError:
+    import subprocess, sys
     subprocess.check_call([sys.executable, "-m", "pip", "install", "sigfig", "scipy", "numpy", "matplotlib"])
     print(' \t ~~ All dependencies succesfully installed. ~~ \n\n')
 
@@ -45,6 +45,7 @@ class Truss(metaclass=ClassIter):
     """
     A class containing the truss to be worked with.
     """
+
     _ClassRegistry = []
 
     def __init__(self, bar_params: dict = None, units='kN, mm'):
@@ -567,6 +568,7 @@ def validate_var_name(var_name: str, allow_existing_vars=True):
     globals() where the key is var_name and the object reference is
     the value.
     """
+    import keyword
 
     if var_name in globals() and not allow_existing_vars:
         raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already in use.'
@@ -582,6 +584,7 @@ def plt_set_fullscreen(plt):
     """
     Automatically set the matplotlib output to fullscreen.
     """
+    import os
 
     backend = str(plt.get_backend())
     mgr = plt.get_current_fig_manager()
@@ -598,8 +601,7 @@ def plt_set_fullscreen(plt):
         raise EnvironmentError(f'The backend in use, {backend}, is not supported in fullscreen mode.')
 
 
-
-# FACTORY FUNCTIONS
+# OBJECT BUILDING FUNCTIONS
 
 '''
 Allows trusses to be constructed with user-defined names instead of fixed variable names.
@@ -682,6 +684,7 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
     #####################################################
 """---------------------------------------------------------------------------------------"""
 
+import os
 
 #  Fix issue with warning appearing when run from .exe
 if os.path.basename(__file__).endswith('.exe'):
