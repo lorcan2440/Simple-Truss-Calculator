@@ -171,10 +171,13 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, joint: object, support_type: str = 'encastre',
-                     roller_normal_vector: tuple = (1, 0)):
+                     roller_normal_vector: tuple = None):
             """
             Initialise a support with a name, a joint object to convert to a support, the type of support
             and a direction if a roller joint is chosen.
+
+            support_type:         can be 'pin' or 'roller' or 'encastre'
+            roller_normal_vector: only relevant with roller joints, sets the direction of their reaction force
             """
 
             self.name = name
@@ -183,14 +186,15 @@ class Truss(metaclass=ClassIter):
                 self._ClassRegistry.append(self)
             
             self.joint = joint
-            self.type = support_type
-            self.dir = roller_normal_vector
-            if self.type in ('encastre', 'pin'):
-                joint.loads['Reaction @ {}'.format(self.name)] = (None, None)
-                # Independent unknowns: fill in later
-            elif self.type == 'roller':
-                joint.loads['Reaction @ {}'.format(self.name)] = (None * self.dir[0], None * self.dir[1])
-                # Dependent unknowns: fill in later
+            self.support_type = support_type
+
+            if roller_normal_vector not in {None, (0, 0)}:
+                self.roller_normal_vector = np.array(roller_normal_vector) / np.linalg.norm(roller_normal_vector)
+            else:
+                self.roller_normal_vector = None
+
+            if self.support_type in {'encastre', 'pin', 'roller'}:
+                joint.loads[f'Reaction @ {self.name}'] = (None, None)
             else:
                 raise ValueError('Support type must be "encastre", "roller" or "pin".')
 
@@ -286,8 +290,13 @@ class Truss(metaclass=ClassIter):
         for bar in self.get_all_bars():
             wanted_vars.append('Tension in ' + bar.name)
         for support in self.get_all_supports():
-            wanted_vars.append('Horizontal reaction at ' + support.joint.name)
-            wanted_vars.append('Vertical reaction at ' + support.joint.name)
+            if support.support_type in {'pin', 'encastre'}:
+                wanted_vars.append('Horizontal reaction at ' + support.joint.name)
+                wanted_vars.append('Vertical reaction at ' + support.joint.name)
+            elif support.support_type == 'roller':
+                wanted_vars.append('Magnitude of reaction at ' + support.joint.name)
+            else:
+                continue
 
         all_directions = {}
         for joint in self.get_all_joints():
@@ -302,8 +311,12 @@ class Truss(metaclass=ClassIter):
 
             # If there are reactions at this joint, store their directions too
             if any([s.joint.name == joint.name for s in self.get_all_supports()]):
-                directions['Horizontal reaction at ' + joint.name] = 0
-                directions['Vertical reaction at ' + joint.name] = math.pi / 2
+                if self.get_support_by_joint(joint).support_type == 'roller':
+                    directions['Magnitude of reaction at ' + joint.name] = math.atan2(
+                        *reversed(list(self.get_support_by_joint(joint).roller_normal_vector)))
+                else:
+                    directions['Horizontal reaction at ' + joint.name] = 0
+                    directions['Vertical reaction at ' + joint.name] = math.pi / 2
 
             # If there are external loads at this joint, store their directions too
             for load in self.get_all_loads_at_joint(joint):
@@ -360,7 +373,8 @@ class Truss(metaclass=ClassIter):
             output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
             _i += 2
 
-        # For whatever reason, sometimes the reaction forces are wrong. Correct them here by resolving at the supports
+        # For whatever reason, sometimes the pin jointed reaction forces are wrong. 
+        # Correct them here by resolving explicitly at the supports.
         for support in self.get_all_supports():
             reaction_corrected = [0, 0]
             for bar in self.get_all_bars_connected_to_joint(support.joint):
@@ -368,7 +382,7 @@ class Truss(metaclass=ClassIter):
                 reaction_corrected[0] -= output_dict[bar.name] * math.cos(angle)
                 reaction_corrected[1] -= output_dict[bar.name] * math.sin(angle)
 
-            output_dict[support.name] = (reaction_corrected[0], reaction_corrected[1])
+            output_dict[support.name] = tuple(reaction_corrected)
         
         # Return the values in dict form
         return output_dict
@@ -379,7 +393,9 @@ class Truss(metaclass=ClassIter):
         is statically determinate (b + F = 2j). Also stores attributes for later quick use.
         """
         self.b = len(self.get_all_bars(str_names_only=True))
-        self.F = sum([2 if support.type in ('encastre', 'pin') else 1 for support in Truss.Support])
+        self.F = sum([2 if support.support_type in {'encastre', 'pin'} 
+                 else 1 if support.support_type == 'roller' 
+                 else 0 for support in Truss.Support])
         self.j = len(self.get_all_joints(str_names_only=True))
         return self.b + self.F == 2 * self.j
 
@@ -391,8 +407,8 @@ class Truss(metaclass=ClassIter):
         """
         from inspect import isclass
 
-        [setattr(inner_cls, '_ClassRegistry', []) for inner_cls in
-                 filter(lambda c: isclass(c), {**cls.__dict__, None: cls}.values())]
+        [setattr(c, '_ClassRegistry', []) for c in
+                 filter(lambda c: isclass(c), {**cls.__dict__, 'Truss': cls}.values())]
 
     '''
     Allow ordering of the trusses by their position in the _ClassRegistry
@@ -476,6 +492,14 @@ class Truss(metaclass=ClassIter):
         Returns a list of support objects in the truss.
         """
         return [support for support in Truss.Support]
+
+    @staticmethod
+    def get_support_by_joint(joint: object):
+        """
+        Returns the support object placed at a given joint, 
+        or None if there is no support there.
+        """
+        return [support for support in Truss.Support if support.joint == joint][0]
 
     @staticmethod
     def get_bar_by_name(bar_name: str):
@@ -736,9 +760,9 @@ if __name__ == "__main__":
     except np.linalg.LinAlgError:  # The truss was badly made, so could not be solved
         valid = myTruss.is_statically_determinate()
         if not valid:
-            raise ArithmeticError('''The truss is not statically determinate. 
-              It cannot be solved. \nBars: {}\nReactions: {}\nJoints: {}'''.format(
-                myTruss.b, myTruss.F, myTruss.j))
+            raise ArithmeticError(f'''The truss is not statically determinate. 
+              It cannot be solved. \nBars: {myTruss.b} \t Reactions: {myTruss.F} \t Joints: {myTruss.j}.
+              \n b + F = {myTruss.b}, 2j = {2 * myTruss.j}''')
         else:  # Some other issue occured. May require attention to the code.
             raise Exception("Something else went wrong. Couldn't identify the problem.")
 

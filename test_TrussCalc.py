@@ -15,23 +15,24 @@ def build_truss(truss, joints: tuple[tuple], bars: tuple[tuple], loads: tuple[tu
         t.create_bar(truss, 'bar_' + _nums[i], 'Bar ' + c, 'joint_' + c[0], 'joint_' + c[1], bar_type)
     for i, (j, x, y) in enumerate(loads):
         t.create_load(truss, 'load_' + j.lower(), r'$W_{' + _nums[i] + r'}$', 'joint_' + j, x, y)
-    for j in supports:
-        t.create_support(truss, 'support_' + j, 'Support ' + j, 'joint_' + j, 'encastre')
+    for i, (j, ty, n) in enumerate(supports):
+        t.create_support(truss, 'support_' + j, 'Support ' + j, 'joint_' + j, support_type=ty,
+        direction=n)
 
 
 def solve_truss(truss, show_outputs=True):
 
     try:
-        my_results = truss.Result(truss, sig_figs=3, solution_method="SCIPY", delete_truss_after=not show_outputs)
+        my_results = truss.Result(truss, sig_figs=3, solution_method="NUMPY.STANDARD", delete_truss_after=not show_outputs)
         if show_outputs:
             print(my_results)
             t.plot_diagram(truss, my_results, show_reactions=False)
     except np.linalg.LinAlgError as e:
         valid = truss.is_statically_determinate()
         if not valid:
-            raise TypeError('''The truss is not statically determinate. 
-              It cannot be solved. \nBars: {}\nReactions: {}\nJoints: {}'''.format(
-                truss.b, truss.F, truss.j))
+           raise ArithmeticError(f'''The truss is not statically determinate. 
+              It cannot be solved. \nBars: {truss.b} \t Reactions: {truss.F} \t Joints: {truss.j}.
+              \n b + F = {truss.b + truss.F}, 2j = {2 * truss.j}''')
         elif str(e) == "Singular matrix":
             raise TypeError('''The truss is a mechanism or contains 
                 mechanistic components. It cannot be solved.''')
@@ -59,7 +60,7 @@ def test_case_1():
     bars = (('AB', medium_2), ('BC', strong), ('CD', medium_1), ('DE', medium_1), 
         ('EF', medium_1), ('AF', medium_2), ('DF', medium_1), ('BF', weak))
     loads = [('C', 0, -0.675)]
-    supports = ('A', 'E')
+    supports = (('A', 'pin', None), ('E', 'pin', None))
     truss = t.Truss(custom_params, 'kN, mm')
     return truss, joints, bars, loads, supports
 
@@ -68,15 +69,26 @@ def test_case_2():
     joints = ((0, 0), (5, 0), (0, 4), (2, 6))
     bars = (('AC', strong), ('BC', strong), ('CD', strong), ('BD', strong))
     loads = [('C', 1000, 0), ('D', 0, -750)]
-    supports = ('A', 'B')
+    supports = (('A', 'pin', None), ('B', 'pin', None))
     truss = t.Truss(custom_params, 'N, m')
     return truss, joints, bars, loads, supports
 
+@set_constants
+def test_case_3():
+    joints = ((0, 1), (1, 0), (1, 1))
+    bars = (('AB', strong), ('BC', strong), ('AC', strong))
+    loads = [('C', 1, 2)]
+    supports = (('A', 'pin', None), ('B', 'roller', (-1, 0)))
+    truss = t.Truss(custom_params, 'N, m')
+    return truss, joints, bars, loads, supports
 
+'''
 time = timeit.timeit(test_case_1, number=1)
 print(time)
+'''
 
-print('Test case 1')
 test_case_1()
-print('Test case 2')
+
 test_case_2()
+
+test_case_3()
