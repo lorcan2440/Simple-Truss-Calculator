@@ -20,7 +20,7 @@ except ImportError:
 finally:
     import numpy as np
     from matplotlib import pyplot as plt
-    from scipy.sparse import linalg, csr_matrix
+    from scipy.sparse import linalg as linsolver, csr_matrix
     import sigfig
 
 
@@ -263,7 +263,9 @@ class Truss(metaclass=ClassIter):
                     self.results[item] = tuple(map(lambda x: round(x, self.sig_figs), self.results[item]))
                     self.reactions.update({item: self.results[item]})
                 else:
-                    raise TypeError('An internal error occured.')
+                    warnings.warn(f'''A result appears to have been formed incorrectly. This is an internal
+                                    error. Bad value ignored: {self.results[item]}''', RuntimeWarning)
+                    continue
 
     # TRUSS METHODS
 
@@ -345,7 +347,7 @@ class Truss(metaclass=ClassIter):
             elif _method_parse[1] == "SOLVE":
                 x = np.linalg.solve(m, b)
         elif _method_parse[0] == "SCIPY":
-            x = linalg.spsolve(csr_matrix(coefficients), csr_matrix(constants))
+            x = linsolver.spsolve(csr_matrix(coefficients), csr_matrix(constants))
 
         # Match values back to variable names
         output_dict = {}
@@ -368,8 +370,6 @@ class Truss(metaclass=ClassIter):
             output_dict[support.name] = (reaction_corrected[0], reaction_corrected[1])
         
         # Return the values in dict form
-        print(wanted_vars)
-        print(directions)
         return output_dict
 
     def is_statically_determinate(self):
@@ -382,13 +382,16 @@ class Truss(metaclass=ClassIter):
         self.j = len(self.get_all_joints(str_names_only=True))
         return self.b + self.F == 2 * self.j
 
-    def _delete_truss(self):
+    @classmethod
+    def _delete_truss(cls):
         """
         Delete the truss and clear the _ClassRegistry when the calculation for a truss 
         is done. Required to prevent the _ClassRegistry adding duplicate objects.
         """
-        _ClassRegistry = []
-        self.Joint._ClassRegistry, self.Bar._ClassRegistry, self.Support._ClassRegistry, self.Load._ClassRegistry = [], [], [], []
+        from inspect import isclass
+
+        [setattr(inner_cls, '_ClassRegistry', []) for inner_cls in
+                 filter(lambda c: isclass(c), {**cls.__dict__, None: cls}.values())]
 
     '''
     Allow ordering of the trusses by their position in the _ClassRegistry
@@ -555,7 +558,7 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
     plt.show()
 
 
-# HELPER FUNCTIONS BEGIN HERE
+# HELPER AND UTILITY FUNCTIONS
 
 def validate_var_name(var_name: str, allow_existing_vars=True):
     """
@@ -596,7 +599,7 @@ def plt_set_fullscreen(plt):
 
 
 
-# OBJECT BUILDERS BEGIN HERE
+# FACTORY FUNCTIONS
 
 '''
 Allows trusses to be constructed with user-defined names instead of fixed variable names.
@@ -683,7 +686,7 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
 #  Fix issue with warning appearing when run from .exe
 if os.path.basename(__file__).endswith('.exe'):
     warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
-                                    category=UserWarning)  # deprecation warning inherits from UserWarning
+                            category=UserWarning)  # deprecation warning inherits from UserWarning
 
 if __name__ == "__main__":
 

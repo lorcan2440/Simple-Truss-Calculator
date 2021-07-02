@@ -49,7 +49,7 @@ def set_constants(run_test_case):
         strong =            {"b": 19,   "t": 1.1,   "D": 5,   "E": 210,     "strength_max": 0.216}
         truss, joints, bars, loads, supports = run_test_case()
         build_truss(truss, joints, bars, loads, supports)
-        solve_truss(truss, show_outputs=False)
+        solve_truss(truss, show_outputs=True)
     return wrapper
 
 
@@ -73,8 +73,10 @@ def test_case_2():
     return truss, joints, bars, loads, supports
 
 
-time = timeit.timeit(test_case_1, number=1000)
+time = timeit.timeit(test_case_1, number=1)
 print(time)
 
+print('Test case 1')
 test_case_1()
+print('Test case 2')
 test_case_2()
