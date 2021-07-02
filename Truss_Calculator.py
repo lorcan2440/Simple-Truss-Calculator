@@ -3,7 +3,8 @@
 Version 1.4
 """
 
-import math, keyword, os, warnings, subprocess, sys     # builtin modules
+import math, keyword, os, warnings, subprocess, sys, re
+from functools import total_ordering                    # builtin modules
 
 # Automatically install missing modules, least likely to be already installed first
 try:
@@ -39,6 +40,7 @@ class ClassIter(type):
 
 # MAIN CLASS FOR TRUSSES
 
+@total_ordering
 class Truss(metaclass=ClassIter):
     """
     A class containing the truss to be worked with.
@@ -55,13 +57,14 @@ class Truss(metaclass=ClassIter):
         if bar_params is None:  # set the units that the calculations should be done in
             if units == 'N, m':
                 self.default_params = {"b": 0.016, "t": 0.004, "D": 0.020,
-                                       "E": 2.1e11}  # some default values, easily overridden
+                                       "E": 2.1e11}  # some default values. symbols defined in databook
             elif units == 'kN, mm':
                 self.default_params = {"b": 1.6, "t": 4, "D": 20, "E": 210}  # same values as above but in other units
             else:
                 raise ValueError('Units must be either "N, m" or "kN, mm".')
         else:
             self.default_params = bar_params
+        
         self.units = units
 
     # PARTS OF THE TRUSS (INNER CLASSES)
@@ -78,8 +81,8 @@ class Truss(metaclass=ClassIter):
 
             self.name = name
 
-            if not self.name in [i.name for i in self._ClassRegistry]:
-                self._ClassRegistry.append(self)
+            if not self.name in (i.name for i in self._ClassRegistry):
+                            self._ClassRegistry.append(self)
     
             self.truss = truss
             self.x = x
@@ -102,8 +105,8 @@ class Truss(metaclass=ClassIter):
 
             self.name = name  # The user-defined name
 
-            if not self.name in [i.name for i in self._ClassRegistry]:  # Register this bar instance if its name has
-                self._ClassRegistry.append(self)                        # not already been registered
+            if not self.name in (i.name for i in self._ClassRegistry):
+                self._ClassRegistry.append(self)
             
             self.truss = truss  # the class which this bar belongs to
             self.first_joint, self.first_joint_name = first_joint, first_joint.name         # the object and name of the first and
@@ -151,7 +154,7 @@ class Truss(metaclass=ClassIter):
 
             self.name = name
 
-            if not self.name in [i.name for i in self._ClassRegistry]:
+            if not self.name in (i.name for i in self._ClassRegistry):
                 self._ClassRegistry.append(self)
 
             self.joint = joint
@@ -175,7 +178,7 @@ class Truss(metaclass=ClassIter):
 
             self.name = name
 
-            if not self.name in [i.name for i in self._ClassRegistry]:
+            if not self.name in (i.name for i in self._ClassRegistry):
                 self._ClassRegistry.append(self)
             
             self.joint = joint
@@ -189,195 +192,6 @@ class Truss(metaclass=ClassIter):
                 # Dependent unknowns: fill in later
             else:
                 raise ValueError('Support type must be "encastre", "roller" or "pin".')
-
-    # TRUSS METHODS
-
-    '''
-    Returns all objects of a given type by their name or object reference.
-    '''
-
-    def get_all_bars(self, str_names_only: bool = False):
-        """
-        Returns a list of bar objects or strings in this truss.
-        """
-        if not str_names_only:
-            return [bar for bar in Truss.Bar]
-        else:
-            return [bar.name for bar in Truss.Bar]
-
-    def get_all_joints(self, str_names_only: bool = False):
-        """
-        Returns a list of all joint objects or strings in this truss.
-        """
-        if not str_names_only:
-            return [joint for joint in Truss.Joint]
-        else:
-            return [joint.name for joint in Truss.Joint]
-
-    def get_all_bars_connected_to_joint(self, joint: object, str_names_only: bool = False):
-        """
-        Returns a list of bar objects or names which are connected to a given joint object.
-        """
-        if not str_names_only:
-            return [bar for bar in Truss.Bar if joint.name in (bar.first_joint.name, bar.second_joint.name)]
-        else:
-            return [bar.name for bar in Truss.Bar if joint.name in (bar.first_joint.name, bar.second_joint.name)]
-
-    def get_all_joints_connected_to_bar(self, bar: object, str_names_only: bool = False):
-        """
-        Returns a list of joint objects or names which are connected to a given bar object.
-        """
-        if not str_names_only:
-            return [bar.first_joint, bar.second_joint]
-        else:
-            return [bar.first_joint.name, bar.second_joint.name]
-
-    def get_all_loads(self):
-        """
-        Returns a list of load objects in the truss.
-        """
-        return [load for load in Truss.Load]
-
-    def get_all_loads_at_joint(self, joint: object):
-        """
-        Returns a list of load objects which are applied at a given joint object.
-        """
-        return [load for load in Truss.Load if load.joint == joint]
-
-    def get_all_loads_at_joint_by_name(self, joint_name: str):
-        """
-        Returns a list of load objects which are applied at a given joint name.
-        """
-        return [load for load in Truss.Load if load.joint.name == joint_name]
-
-    def get_all_supports(self):
-        """
-        Returns a list of support objects in the truss.
-        """
-        return [support for support in Truss.Support]
-
-    def get_bar_by_name(self, bar_name: str):
-        """
-        Returns the corresponding bar object given a bar name.
-        """
-        for bar in Truss.Bar:
-            if bar.name == bar_name:
-                return bar
-
-    def is_statically_determinate(self):
-        """
-          Does a simple arithmetic check to estimate if the truss
-          is statically determinate (b + F = 2j). Also stores attributes for later quick use.
-          """
-        self.b = len(self.get_all_bars(str_names_only=True))
-        self.F = sum([2 if support.type in ('encastre', 'pin') else 1 for support in Truss.Support])
-        self.j = len(self.get_all_joints(str_names_only=True))
-        return self.b + self.F == 2 * self.j
-
-    def _delete_truss(self):
-        """
-        Delete the truss and clear the _ClassRegistry when the calculation for a truss 
-        is done. Required to prevent the _ClassRegistry adding duplicate objects.
-        """
-        _ClassRegistry = []
-        self.Joint._ClassRegistry, self.Bar._ClassRegistry, self.Support._ClassRegistry, self.Load._ClassRegistry = [], [], [], []
-
-    def calculate(self, solution_method="NUMPY.STANDARD"):
-        """
-        The main part of the program. Calculates the forces in the truss's bars and supports
-        in order to maintain force equilibrium with the given loads. Outputs as a dictionary in the form
-        {bar_name: axial_force_value} + {support_name: (reaction_force_value_x, reaction_force_value_y)}
-        """
-        # Get a list of the distinct joint names, number of equations to form = 2 * number of joints
-        joint_names = self.get_all_joints(str_names_only=True)
-
-        # List of dictionaries for unknowns, given default zero values
-        wanted_vars = []
-        for bar in self.get_all_bars():
-            wanted_vars.append('Tension in ' + bar.name)
-        for support in self.get_all_supports():
-            wanted_vars.append('Horizontal reaction at ' + support.joint.name)
-            wanted_vars.append('Vertical reaction at ' + support.joint.name)
-
-        all_directions = {}
-        for joint in self.get_all_joints():
-            # Reset the directions dictionary for this joint
-            directions = {}
-            connected_bars = self.get_all_bars_connected_to_joint(joint)
-
-            # Get the anticlockwise (polar) angle of each connected joint relative to this joint which have bars
-            for bar in connected_bars:
-                angle = bar.get_direction(joint)
-                directions['Tension in ' + bar.name] = angle
-
-            # If there are reactions at this joint, store their directions too
-            if any([s.joint.name == joint.name for s in self.get_all_supports()]):
-                directions['Horizontal reaction at ' + joint.name] = 0
-                directions['Vertical reaction at ' + joint.name] = math.pi / 2
-
-            # If there are external loads at this joint, store their directions too
-            for load in self.get_all_loads_at_joint(joint):
-                directions['Horizontal component of {} at {}'.format(load.name, joint.name)] = 0
-                directions['Vertical component of {} at {}'.format(load.name, joint.name)] = math.pi / 2
-
-            all_directions[joint.name] = directions
-
-        # Store the coefficients of the unknowns in each equation
-        coefficients = []
-        for joint_name in joint_names:
-            current_line = [round(math.cos(all_directions[joint_name].get(var, math.pi/2)), 10) for var in wanted_vars]
-            coefficients.append(current_line)
-            current_line = [round(math.sin(all_directions[joint_name].get(var, 0)), 10) for var in wanted_vars]
-            coefficients.append(current_line)
-
-        # Store the constants of each equation, negative since they are on the other side of the system of equations
-        constants = []
-        for joint_name in joint_names:
-            try:
-                constants.append([-1 * sum(L.x) for L in self.get_all_loads_at_joint_by_name(joint_name)])
-                constants.append([-1 * sum(L.y) for L in self.get_all_loads_at_joint_by_name(joint_name)])
-            except TypeError:
-                constants.append([-1 * L.x for L in self.get_all_loads_at_joint_by_name(joint_name)])
-                constants.append([-1 * L.y for L in self.get_all_loads_at_joint_by_name(joint_name)])
-
-        # Sanitise load data
-        for i in range(len(constants)):
-            if constants[i] == [] or constants[i] == [None]:
-                constants[i] = [0]
-        
-        # Solve the system - both coefficient and constant matrices are sparse so ideally the SCIPY method is faster.
-        _method_parse = solution_method.split('.')
-        if _method_parse[0] == "NUMPY":
-            m, b = np.matrix(coefficients), np.matrix(constants)
-            if _method_parse[1] == "STANDARD":
-                x = np.linalg.inv(m) * b
-            elif _method_parse[1] == "SOLVE":
-                x = np.linalg.solve(m, b)
-        elif _method_parse[0] == "SCIPY":
-            x = linalg.spsolve(csr_matrix(coefficients), csr_matrix(constants))
-
-        # Match values back to variable names
-        output_dict = {}
-        for i, bar in enumerate(self.get_all_bars()):
-            output_dict[bar.name] = float(x[i])
-        else:
-            _i = i
-        for support in self.get_all_supports():
-            output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
-            _i += 2
-
-        # For whatever reason, sometimes the reaction forces are wrong. Correct them here by resolving at the supports
-        for support in self.get_all_supports():
-            reaction_corrected = [0, 0]
-            for bar in self.get_all_bars_connected_to_joint(support.joint):
-                angle = bar.get_direction(support.joint)
-                reaction_corrected[0] -= output_dict[bar.name] * math.cos(angle)
-                reaction_corrected[1] -= output_dict[bar.name] * math.sin(angle)
-
-            output_dict[support.name] = (reaction_corrected[0], reaction_corrected[1])
-        
-        # Return the values in dict form
-        return output_dict
 
 
     # TRUSS RESULTS CLASS
@@ -399,7 +213,8 @@ class Truss(metaclass=ClassIter):
                 truss._delete_truss()
 
         def __repr__(self):
-            repr_str = f'\n Axial forces are: (positive = tension; negative = compression) \n \t {str(self.tensions)}'
+            repr_str  = f'\n Axial forces are: '\
+                        f'(positive = tension; negative = compression) \n \t {str(self.tensions)}'
             repr_str += f'\n Axial stresses are: \n \t {str(self.stresses)}'
             repr_str += f'\n Reaction forces are (horizontal, vertical) components (signs '\
                         f'consistent with coordinate system): \n \t {str(self.reactions)}'
@@ -449,6 +264,223 @@ class Truss(metaclass=ClassIter):
                     self.reactions.update({item: self.results[item]})
                 else:
                     raise TypeError('An internal error occured.')
+
+    # TRUSS METHODS
+
+    def calculate(self, solution_method="SCIPY"):
+
+        """
+        The main part of the program. Calculates the forces in the truss's bars and supports
+        in order to maintain force equilibrium with the given loads. Outputs as a dictionary in the form
+        {bar_name: axial_force_value} + {support_name: (reaction_force_value_x, reaction_force_value_y)}
+        """
+
+        # Get a list of the distinct joint names, number of equations to form = 2 * number of joints
+        joint_names = self.get_all_joints(str_names_only=True)
+
+        # List of dictionaries for unknowns, given default zero values
+        wanted_vars = []
+        for bar in self.get_all_bars():
+            wanted_vars.append('Tension in ' + bar.name)
+        for support in self.get_all_supports():
+            wanted_vars.append('Horizontal reaction at ' + support.joint.name)
+            wanted_vars.append('Vertical reaction at ' + support.joint.name)
+
+        all_directions = {}
+        for joint in self.get_all_joints():
+            # Reset the directions dictionary for this joint
+            directions = {}
+            connected_bars = self.get_all_bars_connected_to_joint(joint)
+
+            # Get the anticlockwise (polar) angle of each connected joint relative to this joint which have bars
+            for bar in connected_bars:
+                angle = bar.get_direction(joint)
+                directions['Tension in ' + bar.name] = angle
+
+            # If there are reactions at this joint, store their directions too
+            if any([s.joint.name == joint.name for s in self.get_all_supports()]):
+                directions['Horizontal reaction at ' + joint.name] = 0
+                directions['Vertical reaction at ' + joint.name] = math.pi / 2
+
+            # If there are external loads at this joint, store their directions too
+            for load in self.get_all_loads_at_joint(joint):
+                directions['Horizontal component of {} at {}'.format(load.name, joint.name)] = 0
+                directions['Vertical component of {} at {}'.format(load.name, joint.name)] = math.pi / 2
+
+            all_directions[joint.name] = directions
+
+        # Store the coefficients of the unknowns in each equation
+        coefficients = []
+        for joint_name in joint_names:
+            current_line = [round(math.cos(all_directions[joint_name].get(var, math.pi/2)), 10) for var in wanted_vars]
+            coefficients.append(current_line)
+            current_line = [round(math.sin(all_directions[joint_name].get(var, 0)), 10) for var in wanted_vars]
+            coefficients.append(current_line)
+
+        # Store the constants of each equation, negative since they are on the other side of the system of equations
+        constants = []
+        for joint_name in joint_names:
+            try:
+                constants.append([-1 * sum(load.x) for load in 
+                                  self.get_all_loads_at_joint_by_name(joint_name)])
+                constants.append([-1 * sum(load.y) for load in
+                                  self.get_all_loads_at_joint_by_name(joint_name)])
+            except TypeError:
+                constants.append([-1 * load.x for load in
+                                  self.get_all_loads_at_joint_by_name(joint_name)])
+                constants.append([-1 * load.y for load in
+                                  self.get_all_loads_at_joint_by_name(joint_name)])
+
+        # Sanitise load data
+        for i in range(len(constants)):
+            if constants[i] == [] or constants[i] == [None]:
+                constants[i] = [0]
+        
+        # Solve the system - both coefficient and constant matrices are sparse so ideally the SCIPY method is faster.
+        _method_parse = solution_method.split('.')
+        if _method_parse[0] == "NUMPY":
+            m, b = np.matrix(coefficients), np.matrix(constants)
+            if _method_parse[1] == "STANDARD":
+                x = np.linalg.inv(m) * b
+            elif _method_parse[1] == "SOLVE":
+                x = np.linalg.solve(m, b)
+        elif _method_parse[0] == "SCIPY":
+            x = linalg.spsolve(csr_matrix(coefficients), csr_matrix(constants))
+
+        # Match values back to variable names
+        output_dict = {}
+        for i, bar in enumerate(self.get_all_bars()):
+            output_dict[bar.name] = float(x[i])
+        else:
+            _i = i
+        for support in self.get_all_supports():
+            output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
+            _i += 2
+
+        # For whatever reason, sometimes the reaction forces are wrong. Correct them here by resolving at the supports
+        for support in self.get_all_supports():
+            reaction_corrected = [0, 0]
+            for bar in self.get_all_bars_connected_to_joint(support.joint):
+                angle = bar.get_direction(support.joint)
+                reaction_corrected[0] -= output_dict[bar.name] * math.cos(angle)
+                reaction_corrected[1] -= output_dict[bar.name] * math.sin(angle)
+
+            output_dict[support.name] = (reaction_corrected[0], reaction_corrected[1])
+        
+        # Return the values in dict form
+        print(wanted_vars)
+        print(directions)
+        return output_dict
+
+    def is_statically_determinate(self):
+        """
+        Does a simple arithmetic check to estimate if the truss
+        is statically determinate (b + F = 2j). Also stores attributes for later quick use.
+        """
+        self.b = len(self.get_all_bars(str_names_only=True))
+        self.F = sum([2 if support.type in ('encastre', 'pin') else 1 for support in Truss.Support])
+        self.j = len(self.get_all_joints(str_names_only=True))
+        return self.b + self.F == 2 * self.j
+
+    def _delete_truss(self):
+        """
+        Delete the truss and clear the _ClassRegistry when the calculation for a truss 
+        is done. Required to prevent the _ClassRegistry adding duplicate objects.
+        """
+        _ClassRegistry = []
+        self.Joint._ClassRegistry, self.Bar._ClassRegistry, self.Support._ClassRegistry, self.Load._ClassRegistry = [], [], [], []
+
+    '''
+    Allow ordering of the trusses by their position in the _ClassRegistry
+    which represents the order they were created in. Used by @functools.total_ordering.
+    '''
+    def __lt__(self, other):
+        return self._ClassRegistry.index(self) < self._ClassRegistry.index(other)
+
+    def __ge__(self, other):
+        return self._ClassRegistry.index(self) >= self._ClassRegistry.index(other)
+    
+    
+    """
+    Returns all objects of a given type by their name or object reference.
+    """
+
+    @staticmethod
+    def get_all_bars(str_names_only: bool = False):
+        """
+        Returns a list of bar objects or strings in this truss.
+        """
+        if not str_names_only:
+            return [bar for bar in Truss.Bar]
+        else:
+            return {bar.name for bar in Truss.Bar}
+
+    @staticmethod
+    def get_all_joints(str_names_only: bool = False):
+        """
+        Returns a list of all joint objects or strings in this truss.
+        """
+        if not str_names_only:
+            return [joint for joint in Truss.Joint]
+        else:
+            return {joint.name for joint in Truss.Joint}
+
+    @staticmethod
+    def get_all_bars_connected_to_joint(joint: object, str_names_only: bool = False):
+        """
+        Returns a list of bar objects or names which are connected to a given joint object.
+        """
+        if not str_names_only:
+            return [bar for bar in Truss.Bar if joint.name in {bar.first_joint.name, bar.second_joint.name}]
+        else:
+            return {bar.name for bar in Truss.Bar if joint.name in {bar.first_joint.name, bar.second_joint.name}}
+
+    @staticmethod
+    def get_all_joints_connected_to_bar(bar: object, str_names_only: bool = False):
+        """
+        Returns a list of joint objects or names which are connected to a given bar object.
+        """
+        if not str_names_only:
+            return (bar.first_joint, bar.second_joint)
+        else:
+            return (bar.first_joint.name, bar.second_joint.name)
+
+    @staticmethod
+    def get_all_loads():
+        """
+        Returns a list of load objects in the truss.
+        """
+        return [load for load in Truss.Load]
+
+    @staticmethod
+    def get_all_loads_at_joint(joint: object):
+        """
+        Returns a list of load objects which are applied at a given joint object.
+        """
+        return [load for load in Truss.Load if load.joint == joint]
+
+    @staticmethod
+    def get_all_loads_at_joint_by_name(joint_name: str):
+        """
+        Returns a list of load objects which are applied at a given joint name.
+        """
+        return [load for load in Truss.Load if load.joint.name == joint_name]
+
+    @staticmethod
+    def get_all_supports():
+        """
+        Returns a list of support objects in the truss.
+        """
+        return [support for support in Truss.Support]
+
+    @staticmethod
+    def get_bar_by_name(bar_name: str):
+        """
+        Returns the corresponding bar object given a bar name.
+        """
+        for bar in Truss.Bar:
+            if bar.name == bar_name:
+                return bar
 
 
 # TRUSS INNER CLASSES END HERE, MAIN RESULTS FUNCTIONS START HERE
@@ -642,16 +674,16 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
 
 
 """---------------------------------------------------------------------------------------"""
-    ##########################################
+    #####################################################
     #           PROGRAM EXECUTION STARTS HERE           #
-    ##########################################
+    #####################################################
 """---------------------------------------------------------------------------------------"""
 
-'''
+
 #  Fix issue with warning appearing when run from .exe
-warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
-                                category=UserWarning)  # deprecation warning inherits from UserWarning
-'''
+if os.path.basename(__file__).endswith('.exe'):
+    warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
+                                    category=UserWarning)  # deprecation warning inherits from UserWarning
 
 if __name__ == "__main__":
 
