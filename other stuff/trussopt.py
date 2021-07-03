@@ -1,3 +1,20 @@
+##########################################################################
+# This Python script was written by L. He, M. Gilbert, X. Song           #
+# University of Sheffield, United Kingdom                                #
+# Please send comments to: linwei.he@sheffield.ac.uk                     #
+# The script is intended for educational purposes - theoretical details  #
+# are discussed in the following paper, which should be cited in any     #
+# derivative works or technical papers which use the script:             #
+#                                                                        #
+# "A Python script for adaptive layout optimization of trusses",         #
+# L. He, M. Gilbert, X. Song, Struct. Multidisc. Optim., 2018            #
+#                                                                        #
+# Disclaimer:                                                            #
+# The authors reserve all rights but do not guarantee that the script is #
+# free from errors. Furthermore, the authors are not liable for any      #
+# issues caused by the use of the program.                               #
+##########################################################################
+
 from math import gcd, ceil
 import itertools
 from scipy import sparse
@@ -106,22 +123,3 @@ def trussopt(width, height, st, sc, jc):
 # Execution function when called directly by Python
 if __name__ == '__main__':
     trussopt(width = 20, height = 10, st = 1, sc =1, jc = 0)
-
-
-
-##########################################################################
-# This Python script was written by L. He, M. Gilbert, X. Song           #
-# University of Sheffield, United Kingdom                                #
-# Please send comments to: linwei.he@sheffield.ac.uk                     #
-# The script is intended for educational purposes - theoretical details  #
-# are discussed in the following paper, which should be cited in any     #
-# derivative works or technical papers which use the script:             #
-#                                                                        #
-# "A Python script for adaptive layout optimization of trusses",         #
-# L. He, M. Gilbert, X. Song, Struct. Multidisc. Optim., 2018            #
-#                                                                        #
-# Disclaimer:                                                            #
-# The authors reserve all rights but do not guarantee that the script is #
-# free from errors. Furthermore, the authors are not liable for any      #
-# issues caused by the use of the program.                               #
-##########################################################################
