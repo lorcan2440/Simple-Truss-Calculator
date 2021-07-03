@@ -171,7 +171,7 @@ class Truss(metaclass=ClassIter):
         """
         _ClassRegistry = []
 
-        def __init__(self, truss: object, name: str, joint: object, support_type: str = 'encastre',
+        def __init__(self, truss: object, name: str, joint: object, support_type: str = 'pin',
                      roller_normal_vector: tuple = None, pin_rotation: float = 0):
             """
             Initialise a support with a name, a joint object to convert to a support, the type of support
@@ -276,6 +276,7 @@ class Truss(metaclass=ClassIter):
                     warnings.warn(f'''A result appears to have been formed incorrectly. This is an internal
                                     error. Bad value ignored: {self.results[item]}''', RuntimeWarning)
                     continue
+
 
     # TRUSS METHODS
 
@@ -404,6 +405,23 @@ class Truss(metaclass=ClassIter):
                  else 0 for support in Truss.Support])
         self.j = len(self.get_all_joints(str_names_only=True))
         return self.b + self.F == 2 * self.j
+
+    def classify_error_in_truss(self, e: np.linalg.LinAlgError):
+        """
+        If there was an exception raised when solving, attempt to find the cause and raise
+        a more user-friendly exception message.
+        """
+        valid = self.is_statically_determinate()
+        if not valid:
+            raise ArithmeticError(f'''The truss is not statically determinate. 
+                It cannot be solved. \nBars: {self.b} \t Reactions: {self.F} \t Joints: {self.j}.
+                \n b + F = {self.b + self.F}, 2j = {2 * self.j}''')
+        elif str(e) == "Singular matrix":
+            raise TypeError('''
+            The truss contains mechanistic and/or overconstrained components despite
+            being globally statically determinate. It cannot be solved.''')
+        else:
+            raise TypeError("Something else went wrong. Couldn't identify the problem.")
 
     @classmethod
     def _delete_truss(cls):
@@ -661,8 +679,9 @@ def draw_support(x: float, y: float, size: float,
             raise TypeError(f'''
             'The combination of supplied information: support type ({support_type}), pin rotation angle'
             '({pin_rotation}) and roller direction ({roller_normal_vector}) is invalid.''')
-            
-        rot = lambda _p: (x + (_p[0] - x) * math.cos(a) + (_p[1] - y) * math.sin(a), 
+        
+        # function for rotating a given coordinate tuple _p = (_x, _y) by a radians clockwise about (x, y)
+        rot = lambda _p: (x + (_p[0] - x) * math.cos(a) + (_p[1] - y) * math.sin(a),
                         y - (_p[0] - x) * math.sin(a) + (_p[1] - y) * math.cos(a))
 
     if support_type == 'encastre':
@@ -675,11 +694,7 @@ def draw_support(x: float, y: float, size: float,
                      linewidth=1, color='black', zorder=0)
 
     if support_type == 'pin':
-
-        print(pin_rotation)
-
         if pin_rotation == 0:
-        
             # Pin symbol: triangle resting on ground
             plt.plot((x - size / 20, x - (1 / (3 * math.sqrt(3))) * size,               # equilateral triangle
                     x + (1 / (3 * math.sqrt(3))) * size, x + size / 20),
@@ -697,11 +712,7 @@ def draw_support(x: float, y: float, size: float,
             for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
                 plt.plot((x_pos, x_pos - size / 5), (y - size / 3, y - 8/15 * size),
                         linewidth=1, color='black', zorder=0)
-
         else:
-
-            print('hello')
-
             # Transform the important points to be plotted: element indices are
             # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
             # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
@@ -918,13 +929,7 @@ if __name__ == "__main__":
     try:  # Get the results of the truss calculation and display graphic
         my_results = myTruss.Result(myTruss, sig_figs=3, solution_method="NUMPY.STANDARD")
         print(my_results)
-    except np.linalg.LinAlgError:  # The truss was badly made, so could not be solved
-        valid = myTruss.is_statically_determinate()
-        if not valid:
-            raise ArithmeticError(f'''The truss is not statically determinate. 
-              It cannot be solved. \nBars: {myTruss.b} \t Reactions: {myTruss.F} \t Joints: {myTruss.j}.
-              \n b + F = {myTruss.b}, 2j = {2 * myTruss.j}''')
-        else:  # Some other issue occured. May require attention to the code.
-            raise Exception("Something else went wrong. Couldn't identify the problem.")
+    except np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
+        myTruss.classify_error_in_truss(e)
 
     plot_diagram(myTruss, my_results, show_reactions=True)

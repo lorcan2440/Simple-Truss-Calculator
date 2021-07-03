@@ -27,16 +27,8 @@ def solve_truss(truss, show_outputs=True):
             print(my_results)
             t.plot_diagram(truss, my_results, show_reactions=False)
     except np.linalg.LinAlgError as e:
-        valid = truss.is_statically_determinate()
-        if not valid:
-           raise ArithmeticError(f'''The truss is not statically determinate. 
-              It cannot be solved. \nBars: {truss.b} \t Reactions: {truss.F} \t Joints: {truss.j}.
-              \n b + F = {truss.b + truss.F}, 2j = {2 * truss.j}''')
-        elif str(e) == "Singular matrix":
-            raise TypeError('''The truss is a mechanism or contains 
-                mechanistic components. It cannot be solved.''')
-        else:
-            raise TypeError("Something else went wrong. Couldn't identify the problem.")
+        print(type(e))
+        truss.classify_error_in_truss(e)
 
 
 def set_constants(run_test_case):
@@ -74,10 +66,9 @@ def test_case_2():
 
 @set_constants
 def test_case_3():
-    joints = ((0, 1.5), (1, 0), (1, 1.5))
+    joints = ((0, 1), (1, 0), (1, 1))
     bars = (('AB', strong), ('BC', strong), ('AC', strong))
     loads = [('C', 1, 2)]
-    supports = (('A', 'pin', None), ('B', 'roller', (1, 1)))
     supports = (('A', {'support_type': 'pin', 'pin_rotation': 90}), 
                 ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 1)})
                 )
