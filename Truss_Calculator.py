@@ -172,13 +172,14 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, joint: object, support_type: str = 'encastre',
-                     roller_normal_vector: tuple = None):
+                     roller_normal_vector: tuple = None, pin_rotation: float = 0):
             """
             Initialise a support with a name, a joint object to convert to a support, the type of support
             and a direction if a roller joint is chosen.
 
             support_type:         can be 'pin' or 'roller' or 'encastre'
             roller_normal_vector: only relevant with roller joints, sets the direction of their reaction force
+            pin_rotation:         only relevant with pin joints, sets the direction which they are displayed
             """
 
             self.name = name
@@ -188,6 +189,7 @@ class Truss(metaclass=ClassIter):
             
             self.joint = joint
             self.support_type = support_type
+            self.pin_rotation = pin_rotation
 
             if roller_normal_vector not in {None, (0, 0)}:
                 self.roller_normal_vector = np.array(roller_normal_vector) / np.linalg.norm(roller_normal_vector)
@@ -195,7 +197,7 @@ class Truss(metaclass=ClassIter):
             else:
                 self.roller_normal_vector = None
                 self.direction_of_reaction = None
-
+                
             if self.support_type in {'encastre', 'pin', 'roller'}:
                 joint.loads[f'Reaction @ {self.name}'] = (None, None)
             else:
@@ -572,7 +574,8 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
                  label=f'{support.name}: {str(results.reactions[support.name])} {truss.units.split(",")[0]}')
 
         draw_support(support.joint.x, support.joint.y, arrow_sizes * 0.9, 
-                     support_type=support.support_type, roller_normal_vector=support.roller_normal_vector)
+                     support_type=support.support_type, roller_normal_vector=support.roller_normal_vector,
+                     pin_rotation=support.pin_rotation)
 
     # Plot all loads
     for load in truss.get_all_loads():
@@ -639,20 +642,26 @@ def set_matplotlib_fullscreen():
 
 
 def draw_support(x: float, y: float, size: float,
-                 support_type: str = 'pin', 
-                 roller_normal_vector: tuple = None):
+                 support_type: str = 'pin', pin_rotation: float = 0, roller_normal_vector: tuple = None):
     """
     Draw a particular type of support, using the standard conventional symbols, on
     the matplotlib truss diagram. If roller is chosen, its direction is 
-    shown by rotating the drawing.
+    shown by rotating the drawing. Optional pin rotation in clockwise degrees from vertical.
     """
     import math
     from matplotlib import pyplot as plt
 
-    
     # Helper function to rotate the drawing
-    if support_type in {'roller', 'pin_rotated'}:
-        a = math.pi / 2 - math.atan2(*reversed(roller_normal_vector))
+    if (pin_rotation != 0) ^ (roller_normal_vector is not None):  # either but not both: cannot be encastre
+        if support_type == 'roller':
+            a = math.pi / 2 - math.atan2(*reversed(roller_normal_vector))
+        elif support_type == 'pin':
+            a = math.radians(pin_rotation)
+        else:
+            raise TypeError(f'''
+            'The combination of supplied information: support type ({support_type}), pin rotation angle'
+            '({pin_rotation}) and roller direction ({roller_normal_vector}) is invalid.''')
+            
         rot = lambda _p: (x + (_p[0] - x) * math.cos(a) + (_p[1] - y) * math.sin(a), 
                         y - (_p[0] - x) * math.sin(a) + (_p[1] - y) * math.cos(a))
 
@@ -666,58 +675,64 @@ def draw_support(x: float, y: float, size: float,
                      linewidth=1, color='black', zorder=0)
 
     if support_type == 'pin':
+
+        print(pin_rotation)
+
+        if pin_rotation == 0:
         
-        # Pin symbol: triangle resting on ground
-        plt.plot((x - size / 20, x - (1 / (3 * math.sqrt(3))) * size,               # equilateral triangle
-                  x + (1 / (3 * math.sqrt(3))) * size, x + size / 20),
-                 (y - math.sqrt(3) * size / 20, y - size / 3, 
-                 y - size / 3, y - math.sqrt(3) * size / 20), 
-                 linewidth=1, color='black', zorder=0)
+            # Pin symbol: triangle resting on ground
+            plt.plot((x - size / 20, x - (1 / (3 * math.sqrt(3))) * size,               # equilateral triangle
+                    x + (1 / (3 * math.sqrt(3))) * size, x + size / 20),
+                    (y - math.sqrt(3) * size / 20, y - size / 3, 
+                    y - size / 3, y - math.sqrt(3) * size / 20), 
+                    linewidth=1, color='black', zorder=0)
 
-        plt.gca().add_patch(                                                        # circle pin
-            plt.Circle((x, y), size / 10, color='black', linewidth=1, zorder=1))
-        plt.gca().add_patch(
-            plt.Circle((x, y), size / 14, color='white', linewidth=1, zorder=1))
+            plt.gca().add_patch(                                                        # circle pin
+                plt.Circle((x, y), size / 10, color='black', linewidth=1, zorder=1))
+            plt.gca().add_patch(
+                plt.Circle((x, y), size / 14, color='white', linewidth=1, zorder=1))
 
-        plt.plot((x - size / 2, x + size / 2), (y - size / 3, y - size / 3),        # ground
-                 linewidth=1, color='black', zorder=0)
-        for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
-            plt.plot((x_pos, x_pos - size / 5), (y - size / 3, y - 8/15 * size),
-                     linewidth=1, color='black', zorder=0)
+            plt.plot((x - size / 2, x + size / 2), (y - size / 3, y - size / 3),        # ground
+                    linewidth=1, color='black', zorder=0)
+            for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
+                plt.plot((x_pos, x_pos - size / 5), (y - size / 3, y - 8/15 * size),
+                        linewidth=1, color='black', zorder=0)
 
-    if support_type == 'pin_rotated':  # UNUSED TYPE but works if made an option
+        else:
 
-        # Transform the important points to be plotted: element indices are
-        # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
-        # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
-        # 14: ground left point, 15: ground right point
-        _new_pts = list(map(rot, [
-            (x - size / 20, y - math.sqrt(3) * size / 20),
-            (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-            (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-            (x + size / 20, y - math.sqrt(3) * size / 20)
-        ] + [(x_pos, y - size / 3) for x_pos, y_pos in zip(list(np.linspace(
-                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-        ] + [(x_pos - size / 5, y - 8/15 * size) for x_pos, y_pos in zip(list(np.linspace(
-                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-        ] + [(x - size / 2, y - size / 3), (x + size / 2, y - size / 3)]))
+            print('hello')
 
-        xtl, ytl = map(list, zip(*_new_pts))
+            # Transform the important points to be plotted: element indices are
+            # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
+            # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
+            # 14: ground left point, 15: ground right point
+            _new_pts = list(map(rot, [
+                (x - size / 20, y - math.sqrt(3) * size / 20),
+                (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+                (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+                (x + size / 20, y - math.sqrt(3) * size / 20)
+            ] + [(x_pos, y - size / 3) for x_pos, y_pos in zip(list(np.linspace(
+                    x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+            ] + [(x_pos - size / 5, y - 8/15 * size) for x_pos, y_pos in zip(list(np.linspace(
+                    x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+            ] + [(x - size / 2, y - size / 3), (x + size / 2, y - size / 3)]))
 
-        plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
+            xtl, ytl = map(list, zip(*_new_pts))
 
-        plt.gca().add_patch(                                                        # circle pin
-            plt.Circle((x, y), size / 10, linewidth=1, zorder=1,
-                       color='black'))
-        plt.gca().add_patch(
-            plt.Circle((x, y), size / 14, linewidth=1, zorder=1,
-                       color='white'))
-        
-        plt.plot(xtl[14:], ytl[14:], linewidth=1, color='black', zorder=0)          # ground
-        for i, (x_tr, y_tr) in enumerate(_new_pts[4:9]):
-            n = i + 4
-            plt.plot([x_tr, _new_pts[n+5][0]], [y_tr, _new_pts[n+5][1]],
-                linewidth=1, color='black', zorder=0)
+            plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
+
+            plt.gca().add_patch(                                                        # circle pin
+                plt.Circle((x, y), size / 10, linewidth=1, zorder=1,
+                        color='black'))
+            plt.gca().add_patch(
+                plt.Circle((x, y), size / 14, linewidth=1, zorder=1,
+                        color='white'))
+            
+            plt.plot(xtl[14:], ytl[14:], linewidth=1, color='black', zorder=0)          # ground
+            for i, (x_tr, y_tr) in enumerate(_new_pts[4:9]):
+                n = i + 4
+                plt.plot([x_tr, _new_pts[n+5][0]], [y_tr, _new_pts[n+5][1]],
+                    linewidth=1, color='black', zorder=0)
 
     if support_type == 'roller':
         # Roller symbol: pin with wheels, rotated about pin circle to show direction
@@ -828,7 +843,8 @@ def create_load(truss: object, var_name: str, load_name: str,
 
 
 def create_support(truss: object, var_name: str, support_name: str, joint_var_name: str,
-                   support_type: str, direction: tuple = (1, 0), print_info=False):
+                   support_type: str, roller_normal_vector: tuple = None, pin_rotation: float = 0,
+                   print_info=False):
     """
     Create an instance of a support in a truss, with a user defined name support_name,
     stored internally as var_name, at joint variable name string joint_var_name.
@@ -836,12 +852,13 @@ def create_support(truss: object, var_name: str, support_name: str, joint_var_na
         
     if validate_var_name(var_name):
         globals()[var_name] = truss.Support(truss, support_name,
-                                            globals()[joint_var_name], support_type, direction)
+                                            globals()[joint_var_name], support_type=support_type, 
+                                            roller_normal_vector=roller_normal_vector, pin_rotation=pin_rotation)
 
     if print_info:
         print(f'The support with name "{globals()[var_name].name}", internally stored as "{var_name}", '
         f'has been applied at joint named {globals()[joint_var_name].name}, internally stored as "{joint_var_name}", '
-        f'with type "{support_type}" in direction {direction}.')
+        f'with type "{support_type}" in direction {roller_normal_vector}, with pin rotation {pin_rotation} degrees.')
 
 
 """---------------------------------------------------------------------------------------"""
@@ -893,8 +910,10 @@ if __name__ == "__main__":
     create_load(myTruss, 'load_c', 'W', 'joint_c', 0, -0.675 * 1)
 
     # Step 4. Create the supports
-    create_support(myTruss, 'support_a', 'Support A', 'joint_a', 'encastre')
-    create_support(myTruss, 'support_e', 'Support E', 'joint_e', 'encastre')
+    create_support(myTruss, 'support_a', 'Support A', 'joint_a', 
+                   support_type='encastre')
+    create_support(myTruss, 'support_e', 'Support E', 'joint_e', 
+                   support_type='pin', pin_rotation=90)
 
     try:  # Get the results of the truss calculation and display graphic
         my_results = myTruss.Result(myTruss, sig_figs=3, solution_method="NUMPY.STANDARD")

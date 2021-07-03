@@ -15,9 +15,8 @@ def build_truss(truss, joints: tuple[tuple], bars: tuple[tuple], loads: tuple[tu
         t.create_bar(truss, 'bar_' + _nums[i], 'Bar ' + c, 'joint_' + c[0], 'joint_' + c[1], bar_type)
     for i, (j, x, y) in enumerate(loads):
         t.create_load(truss, 'load_' + j.lower(), r'$W_{' + _nums[i] + r'}$', 'joint_' + j, x, y)
-    for i, (j, ty, n) in enumerate(supports):
-        t.create_support(truss, 'support_' + j, 'Support ' + j, 'joint_' + j, support_type=ty,
-        direction=n)
+    for i, (j, kwargs) in enumerate(supports):
+        t.create_support(truss, 'support_' + j, 'Support ' + j, 'joint_' + j, **kwargs)
 
 
 def solve_truss(truss, show_outputs=True):
@@ -60,7 +59,7 @@ def test_case_1():
     bars = (('AB', medium_2), ('BC', strong), ('CD', medium_1), ('DE', medium_1), 
         ('EF', medium_1), ('AF', medium_2), ('DF', medium_1), ('BF', weak))
     loads = [('C', 0, -0.675)]
-    supports = (('A', 'pin', None), ('E', 'pin', None))
+    supports = (('A', {'support_type': 'encastre'}), ('E', {'support_type': 'pin'}))
     truss = t.Truss(custom_params, 'kN, mm')
     return truss, joints, bars, loads, supports
 
@@ -69,16 +68,19 @@ def test_case_2():
     joints = ((0, 0), (5, 0), (0, 4), (2, 6))
     bars = (('AC', strong), ('BC', strong), ('CD', strong), ('BD', strong))
     loads = [('C', 1000, 0), ('D', 0, -750)]
-    supports = (('A', 'pin', None), ('B', 'pin', None))
+    supports = (('A', {'support_type': 'pin'}), ('B', {'support_type': 'pin'}))
     truss = t.Truss(custom_params, 'N, m')
     return truss, joints, bars, loads, supports
 
 @set_constants
 def test_case_3():
-    joints = ((0, 1), (1, 0), (1, 1))
+    joints = ((0, 1.5), (1, 0), (1, 1.5))
     bars = (('AB', strong), ('BC', strong), ('AC', strong))
     loads = [('C', 1, 2)]
     supports = (('A', 'pin', None), ('B', 'roller', (1, 1)))
+    supports = (('A', {'support_type': 'pin', 'pin_rotation': 90}), 
+                ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 1)})
+                )
     truss = t.Truss(custom_params, 'N, m')
     return truss, joints, bars, loads, supports
 
@@ -86,6 +88,7 @@ def test_case_3():
 time = timeit.timeit(test_case_1, number=1)
 print(time)
 '''
+
 
 test_case_1()
 
