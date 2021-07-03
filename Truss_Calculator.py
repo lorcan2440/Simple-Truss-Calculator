@@ -355,7 +355,8 @@ class Truss(metaclass=ClassIter):
             if constants[i] == [] or constants[i] == [None]:
                 constants[i] = [0]
         
-        # Solve the system - both coefficient and constant matrices are sparse so ideally the SCIPY method is faster.
+        # Solve the system - both coefficient and constant matrices are 
+        # sparse (for most practical cases) so ideally the SCIPY method is faster.
         _method_parse = solution_method.split('.')
         if _method_parse[0] == "NUMPY":
             m, b = np.matrix(coefficients), np.matrix(constants)

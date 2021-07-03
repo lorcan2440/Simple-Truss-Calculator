@@ -15,6 +15,11 @@
 # issues caused by the use of the program.                               #
 ##########################################################################
 
+'''
+Source:
+https://eprints.whiterose.ac.uk/142746/1/trussPython.pdf
+'''
+
 from math import gcd, ceil
 import itertools
 from scipy import sparse
