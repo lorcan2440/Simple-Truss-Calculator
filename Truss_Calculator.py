@@ -2,6 +2,7 @@
 2D Truss Calculator
 Version 1.4
 """
+
 import math, warnings
 from functools import total_ordering                    # builtin modules
 
@@ -58,7 +59,7 @@ class Truss(metaclass=ClassIter):
         if bar_params is None:  # set the units that the calculations should be done in
             if units == 'N, m':
                 self.default_params = {"b": 0.016, "t": 0.004, "D": 0.020,
-                                       "E": 2.1e11}  # some default values. symbols defined in databook
+                                       "E": 2.1e11}  # some default values. symbols defined on databook pg. 8
             elif units == 'kN, mm':
                 self.default_params = {"b": 1.6, "t": 4, "D": 20, "E": 210}  # same values as above but in other units
             else:
@@ -114,7 +115,7 @@ class Truss(metaclass=ClassIter):
             self.second_joint, self.second_joint_name = second_joint, second_joint.name     # secondjoint this bar is connected
             self.params = truss.default_params if my_params is None else my_params  # take the truss's default if bar not given any
 
-            # physical and geometric properties of the bar, as defined in databook
+            # physical and geometric properties of the bar, as defined on databook pg. 8
             [setattr(self, attr, self.params[attr]) for attr in ["b", "t", "D", "E", "strength_max"]]
             self.length = math.sqrt((self.first_joint.x - self.second_joint.x)**2 + (self.first_joint.y - self.second_joint.y)**2)
             self.section_area = (self.b ** 2 - (self.b - self.t) ** 2) * 1.03
@@ -190,8 +191,10 @@ class Truss(metaclass=ClassIter):
 
             if roller_normal_vector not in {None, (0, 0)}:
                 self.roller_normal_vector = np.array(roller_normal_vector) / np.linalg.norm(roller_normal_vector)
+                self.direction_of_reaction = math.atan2(*reversed(self.roller_normal_vector))
             else:
                 self.roller_normal_vector = None
+                self.direction_of_reaction = None
 
             if self.support_type in {'encastre', 'pin', 'roller'}:
                 joint.loads[f'Reaction @ {self.name}'] = (None, None)
@@ -499,7 +502,9 @@ class Truss(metaclass=ClassIter):
         Returns the support object placed at a given joint, 
         or None if there is no support there.
         """
-        return [support for support in Truss.Support if support.joint == joint][0]
+        _supports = [support for support in Truss.Support if support.joint == joint]
+        return _supports[0] if len(_supports) >= 1 else None
+
 
     @staticmethod
     def get_bar_by_name(bar_name: str):
@@ -523,10 +528,14 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
     arrow_sizes = [x.length for x in truss.get_all_bars()]
     arrow_sizes = sum(arrow_sizes) / len(arrow_sizes) * 0.1
 
-    # Plot all joints
-    plt.plot([joint.x for joint in truss.get_all_joints()], [joint.y for joint in truss.get_all_joints()], 'o')
+    # Plot all joints without supports
+    _xjl, _yjl = map(list, zip(*[(joint.x, joint.y) for joint in truss.get_all_joints() 
+                                 if truss.get_support_by_joint(joint) is None]))
+    
+    plt.plot(_xjl, _yjl, 'o', color='black', markersize=5)
+    plt.plot(_xjl, _yjl, 'o', color='white', markersize=3.5)  # small circle with white centre
 
-    # Plot all bars and label their axial forces in the legend
+    # Plot all bars
     for bar in truss.get_all_bars():
 
         plt.plot([bar.first_joint.x, bar.second_joint.x], [bar.first_joint.y, bar.second_joint.y],
@@ -534,30 +543,35 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
                  zorder=0)
 
         # If the bar is nearly vertical, label its name to its right, otherwise label it above
-        if 80 * (math.pi / 180) <= abs(math.atan2(bar.second_joint.y - bar.first_joint.y,
-                                                  bar.second_joint.x - bar.first_joint.x)) <= 100 * (math.pi / 180):
+        if 80 <= abs(math.degrees(math.atan2(bar.second_joint.y - bar.first_joint.y,
+                                                  bar.second_joint.x - bar.first_joint.x))) <= 100:
             plt.text(sum([bar.first_joint.x, bar.second_joint.x]) / 2 + arrow_sizes / 3,
                      sum([bar.first_joint.y, bar.second_joint.y]) / 2, bar.name)
         else:
             plt.text(sum([bar.first_joint.x, bar.second_joint.x]) / 2,
                      sum([bar.first_joint.y, bar.second_joint.y]) / 2 + arrow_sizes / 3, bar.name)
 
-    # Plot all support points with their reactions as arrows
+    # Plot all supports
     for support in truss.get_all_supports():
 
-        plt.plot(support.joint.x, support.joint.y, '*', color='red',
-                 label=support.name + ': ' + str(results.reactions[support.name]) + ' ' + truss.units.split(',')[0])
+        plt.plot(support.joint.x, support.joint.y, '*', markersize=0,
+                 label=support.name + ': ' + \
+                       str(results.reactions[support.name]) + ' ' + truss.units.split(',')[0])
 
     for support in truss.get_all_supports():
         if show_reactions:
-            direction_of_reaction = math.atan2(results.reactions[support.name][1], results.reactions[support.name][0])
-            plt.arrow(support.joint.x, support.joint.y, arrow_sizes, 0,
-                      head_width=arrow_sizes / 5, head_length=arrow_sizes / 4)
-            plt.arrow(support.joint.x, support.joint.y, 0, arrow_sizes,
-                      head_width=arrow_sizes / 5, head_length=arrow_sizes / 4)
+            direction_of_reaction = math.atan2(*reversed(list(results.reactions[support.name])))
+
+            plt.arrow(support.joint.x, support.joint.y, 
+                      arrow_sizes * math.cos(direction_of_reaction),
+                      arrow_sizes * math.sin(direction_of_reaction),
+                      head_width=arrow_sizes / 5, head_length=arrow_sizes / 4, facecolor='red')
 
         plt.text(support.joint.x + arrow_sizes / 4, support.joint.y + arrow_sizes / 4, support.name,
                  label=f'{support.name}: {str(results.reactions[support.name])} {truss.units.split(",")[0]}')
+
+        draw_support(support.joint.x, support.joint.y, arrow_sizes * 0.9, 
+                     support_type=support.support_type, roller_normal_vector=support.roller_normal_vector)
 
     # Plot all loads
     for load in truss.get_all_loads():
@@ -574,13 +588,10 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
         truss._delete_truss()
 
     # Graphical improvements
-    plt.legend(loc='upper right')
-    plt.autoscale()
-    plt.axis('equal')
+    plt.legend(loc='upper right'); plt.autoscale(); plt.axis('equal')
     plt.xlabel(f'$x$-position / {truss.units.split(",")[1]}')
     plt.ylabel(f'$y$-position / {truss.units.split(",")[1]}')
-    plt_set_fullscreen(plt)
-    plt.show()
+    set_matplotlib_fullscreen(); plt.show()
 
 
 # HELPER AND UTILITY FUNCTIONS
@@ -595,8 +606,8 @@ def validate_var_name(var_name: str, allow_existing_vars=True):
     import keyword
 
     if var_name in globals() and not allow_existing_vars:
-        raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already in use.'
-                        f'It cannot be used in the truss.')
+        raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already in use,'
+                        f'possibly because it is a builtin. It cannot be used in the truss.')
     elif not var_name.isidentifier() or keyword.iskeyword(var_name):
         raise SyntaxError(f'{var_name} is not a valid variable name.'
                           f'It can only contain alphanumerics and underscores.')
@@ -604,11 +615,12 @@ def validate_var_name(var_name: str, allow_existing_vars=True):
         return True
 
 
-def plt_set_fullscreen(plt):
+def set_matplotlib_fullscreen():
     """
     Automatically set the matplotlib output to fullscreen.
     """
     import os
+    from matplotlib import pyplot as plt
 
     backend = str(plt.get_backend())
     mgr = plt.get_current_fig_manager()
@@ -625,6 +637,136 @@ def plt_set_fullscreen(plt):
         raise EnvironmentError(f'The backend in use, {backend}, is not supported in fullscreen mode.')
 
 
+def draw_support(x: float, y: float, size: float,
+                 support_type: str = 'pin', 
+                 roller_normal_vector: tuple = None):
+    """
+    Draw a particular type of support, using the standard conventional symbols, on
+    the matplotlib truss diagram. If roller is chosen, its direction is 
+    shown by rotating the drawing.
+    """
+    import math
+    from matplotlib import pyplot as plt
+
+    
+    # Helper function to rotate the drawing
+    if support_type in {'roller', 'pin_rotated'}:
+        a = math.pi / 2 - math.atan2(*reversed(roller_normal_vector))
+        rot = lambda _p: (x + (_p[0] - x) * math.cos(a) + (_p[1] - y) * math.sin(a), 
+                        y - (_p[0] - x) * math.sin(a) + (_p[1] - y) * math.cos(a))
+
+    if support_type == 'encastre':
+
+        # Encastre symbol: solid line and hashed lines representing ground
+        plt.plot((x - size / 2, x + size / 2), (y, y),                              # horizontal line
+                 linewidth=1, color='black', zorder=0)
+        for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
+            plt.plot((x_pos, x_pos - size / 5), (y, y - size / 5),                  # hashed lines
+                     linewidth=1, color='black', zorder=0)
+
+    if support_type == 'pin':
+        
+        # Pin symbol: triangle resting on ground
+        plt.plot((x - size / 20, x - (1 / (3 * math.sqrt(3))) * size,               # equilateral triangle
+                  x + (1 / (3 * math.sqrt(3))) * size, x + size / 20),
+                 (y - math.sqrt(3) * size / 20, y - size / 3, 
+                 y - size / 3, y - math.sqrt(3) * size / 20), 
+                 linewidth=1, color='black', zorder=0)
+
+        plt.gca().add_patch(                                                        # circle pin
+            plt.Circle((x, y), size / 10, color='black', linewidth=1, zorder=1))
+        plt.gca().add_patch(
+            plt.Circle((x, y), size / 14, color='white', linewidth=1, zorder=1))
+
+        plt.plot((x - size / 2, x + size / 2), (y - size / 3, y - size / 3),        # ground
+                 linewidth=1, color='black', zorder=0)
+        for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
+            plt.plot((x_pos, x_pos - size / 5), (y - size / 3, y - 8/15 * size),
+                     linewidth=1, color='black', zorder=0)
+
+    if support_type == 'pin_rotated':  # UNUSED TYPE but works if made an option
+
+        # Transform the important points to be plotted: element indices are
+        # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
+        # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
+        # 14: ground left point, 15: ground right point
+        _new_pts = list(map(rot, [
+            (x - size / 20, y - math.sqrt(3) * size / 20),
+            (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+            (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+            (x + size / 20, y - math.sqrt(3) * size / 20)
+        ] + [(x_pos, y - size / 3) for x_pos, y_pos in zip(list(np.linspace(
+                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+        ] + [(x_pos - size / 5, y - 8/15 * size) for x_pos, y_pos in zip(list(np.linspace(
+                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+        ] + [(x - size / 2, y - size / 3), (x + size / 2, y - size / 3)]))
+
+        xtl, ytl = map(list, zip(*_new_pts))
+
+        plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
+
+        plt.gca().add_patch(                                                        # circle pin
+            plt.Circle((x, y), size / 10, linewidth=1, zorder=1,
+                       color='black'))
+        plt.gca().add_patch(
+            plt.Circle((x, y), size / 14, linewidth=1, zorder=1,
+                       color='white'))
+        
+        plt.plot(xtl[14:], ytl[14:], linewidth=1, color='black', zorder=0)          # ground
+        for i, (x_tr, y_tr) in enumerate(_new_pts[4:9]):
+            n = i + 4
+            plt.plot([x_tr, _new_pts[n+5][0]], [y_tr, _new_pts[n+5][1]],
+                linewidth=1, color='black', zorder=0)
+
+    if support_type == 'roller':
+        # Roller symbol: pin with wheels, rotated about pin circle to show direction
+
+        # Transform the important points to be plotted: element indices are
+        # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
+        # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
+        # 14: ground left point, 15: ground right point
+        # 16: wheel left centre point, 17: wheel right centre point
+        _new_pts = list(map(rot, [
+            (x - size / 20, y - math.sqrt(3) * size / 20),
+            (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+            (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+            (x + size / 20, y - math.sqrt(3) * size / 20)
+        ] + [(x_pos, y - 8/15 * size) for x_pos, y_pos in zip(list(np.linspace(
+                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+        ] + [(x_pos - size / 5, y - 11/15 * size) for x_pos, y_pos in zip(list(np.linspace(
+                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+        ] + [(x - size / 2, y - 8/15 * size), (x + size / 2, y - 8/15 * size)
+        ] + [(x - (0.7 / (3 * math.sqrt(3))) * size, y - 13/30 * size),
+             (x + (0.7 / (3 * math.sqrt(3))) * size, y - 13/30 * size)
+        ]))
+
+        xtl, ytl = map(list, zip(*_new_pts))
+
+        plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
+        
+        plt.gca().add_patch(                                                        # circle pin
+            plt.Circle((x, y), size / 10, linewidth=1, zorder=1,
+                       color='black'))
+        plt.gca().add_patch(
+            plt.Circle((x, y), size / 14, linewidth=1, zorder=1,
+                       color='white'))
+        
+        plt.plot(xtl[14:16], ytl[14:16], linewidth=1, color='black', zorder=0)      # ground
+        for i, (x_tr, y_tr) in enumerate(_new_pts[4:9]):
+            n = i + 4
+            plt.plot([x_tr, _new_pts[n+5][0]], [y_tr, _new_pts[n+5][1]],
+                linewidth=1, color='black', zorder=0)
+        
+        plt.gca().add_patch(                                                        # wheels
+            plt.Circle((xtl[16], ytl[16]), size / 10, color='black', linewidth=1, zorder=1))
+        plt.gca().add_patch(
+            plt.Circle((xtl[16], ytl[16]), size / 14, color='white', linewidth=1, zorder=1))
+        plt.gca().add_patch(
+            plt.Circle((xtl[17], ytl[17]), size / 10, color='black', linewidth=1, zorder=1))
+        plt.gca().add_patch(
+            plt.Circle((xtl[17], ytl[17]), size / 14, color='white', linewidth=1, zorder=1))
+
+
 # OBJECT BUILDING FUNCTIONS
 
 '''
@@ -635,7 +777,6 @@ but displayed to the user as joint_name, bar_name, load_name, support_name.
 This is done by directly accessing the globals() dictionary
 and adding {var_name : some_object_reference} to it.
 '''
-
 
 def create_joint(truss: object, var_name: str, joint_name: str, x: float, y: float, print_info=False):
     """
@@ -717,7 +858,7 @@ if os.path.basename(__file__).endswith('.exe'):
 
 if __name__ == "__main__":
 
-    # -- An example truss --
+    # -- An example truss - cantilever used in SDC --
 
     # Define some example bar parameters, four choices of bar
     weak = {"b": 12.5, "t": 0.7, "D": 5, "E": 210, "strength_max": 0.216}
@@ -727,7 +868,7 @@ if __name__ == "__main__":
 
     # Define some custom bar parameters and initialise the truss
     custom_params = weak
-    myTruss = Truss(custom_params, 'kN, mm')
+    myTruss = Truss(bar_params=custom_params, units='kN, mm')
 
     # Step 1. Create the joints
     create_joint(myTruss, 'joint_a', 'Joint A', 0, 0)

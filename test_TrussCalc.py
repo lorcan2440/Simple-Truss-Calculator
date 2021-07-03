@@ -78,7 +78,7 @@ def test_case_3():
     joints = ((0, 1), (1, 0), (1, 1))
     bars = (('AB', strong), ('BC', strong), ('AC', strong))
     loads = [('C', 1, 2)]
-    supports = (('A', 'pin', None), ('B', 'roller', (-1, 0)))
+    supports = (('A', 'pin', None), ('B', 'roller', (1, 1)))
     truss = t.Truss(custom_params, 'N, m')
     return truss, joints, bars, loads, supports
 
