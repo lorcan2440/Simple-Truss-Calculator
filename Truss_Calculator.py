@@ -110,10 +110,10 @@ class Truss(metaclass=ClassIter):
             if not self.name in (i.name for i in self._ClassRegistry):
                 self._ClassRegistry.append(self)
             
-            self.truss = truss  # the class which this bar belongs to
-            self.first_joint, self.first_joint_name = first_joint, first_joint.name         # the object and name of the first and
-            self.second_joint, self.second_joint_name = second_joint, second_joint.name     # secondjoint this bar is connected
-            self.params = truss.default_params if my_params is None else my_params  # take the truss's default if bar not given any
+            self.truss = truss                                                            # the class which this bar belongs to
+            self.first_joint, self.first_joint_name = first_joint, first_joint.name       # the object and name of the connected joints
+            self.second_joint, self.second_joint_name = second_joint, second_joint.name
+            self.params = truss.default_params if my_params is None else my_params        # take the truss's default if bar not given any
 
             # physical and geometric properties of the bar, as defined on databook pg. 8
             [setattr(self, attr, self.params[attr]) for attr in ["b", "t", "D", "E", "strength_max"]]
@@ -136,7 +136,7 @@ class Truss(metaclass=ClassIter):
                 angle = math.atan2(connected_joints[0].y - origin_joint.y, 
                                     connected_joints[0].x - origin_joint.x)
             else:
-                raise LookupError(f'The bar "{self.name}" appears to be not attached to a joint at both its ends.')
+                raise RuntimeError(f'The bar "{self.name}" appears to be not attached to a joint at both its ends.')
 
             return angle
 
@@ -191,7 +191,7 @@ class Truss(metaclass=ClassIter):
             self.support_type = support_type
             self.pin_rotation = pin_rotation
 
-            if roller_normal_vector not in {None, (0, 0)}:
+            if roller_normal_vector not in [None, (0, 0)]:
                 self.roller_normal_vector = np.array(roller_normal_vector) / np.linalg.norm(roller_normal_vector)
                 self.direction_of_reaction = math.atan2(*reversed(self.roller_normal_vector))
             else:
@@ -201,7 +201,7 @@ class Truss(metaclass=ClassIter):
             if self.support_type in {'encastre', 'pin', 'roller'}:
                 joint.loads[f'Reaction @ {self.name}'] = (None, None)
             else:
-                raise ValueError('Support type must be "encastre", "roller" or "pin".')
+                raise ValueError('Support type must be "encastre", "pin" or "roller".')
 
 
     # TRUSS RESULTS CLASS
@@ -526,7 +526,6 @@ class Truss(metaclass=ClassIter):
         _supports = [support for support in Truss.Support if support.joint == joint]
         return _supports[0] if len(_supports) >= 1 else None
 
-
     @staticmethod
     def get_bar_by_name(bar_name: str):
         """
@@ -613,6 +612,8 @@ def plot_diagram(truss: object, results: object, show_reactions=False, delete_tr
     plt.legend(loc='upper right'); plt.autoscale(); plt.axis('equal')
     plt.xlabel(f'$x$-position / {truss.units.split(",")[1]}')
     plt.ylabel(f'$y$-position / {truss.units.split(",")[1]}')
+    spines = plt.gca().spines 
+    spines['right'].set_visible(False); spines['top'].set_visible(False)
     set_matplotlib_fullscreen(); plt.show()
 
 
@@ -628,14 +629,14 @@ def validate_var_name(var_name: str, allow_existing_vars=True):
     import keyword
 
     if var_name in globals() and not allow_existing_vars:
-        raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already in use,'
-                        f'possibly because it is a builtin. It cannot be used in the truss.')
-    elif not var_name.isidentifier() or keyword.iskeyword(var_name):
-        raise SyntaxError(f'{var_name} is not a valid variable name.'
-                          f'It can only contain alphanumerics and underscores.')
+        raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already in use, '
+                        f'possibly because it is a builtin. \nIt cannot be used in the truss.')
+    elif not var_name.isidentifier() or keyword.iskeyword(var_name) or var_name.startswith('__'):
+        raise NameError(f'{var_name} is not a valid variable name. \n'
+                         'It can only contain alphanumerics and underscores \n'
+                         'and cannot start with double underscore (__).')
     else:
         return True
-
 
 def set_matplotlib_fullscreen():
     """
@@ -656,8 +657,7 @@ def set_matplotlib_fullscreen():
     elif backend in ['Qt4Agg', 'Qt5Agg']:
         mgr.window.showMaximized()
     else:
-        raise EnvironmentError(f'The backend in use, {backend}, is not supported in fullscreen mode.')
-
+        raise RuntimeWarning(f'The backend in use, {backend}, is not supported in fullscreen mode.')
 
 def draw_support(x: float, y: float, size: float,
                  support_type: str = 'pin', pin_rotation: float = 0, roller_normal_vector: tuple = None):
@@ -818,7 +818,6 @@ def create_joint(truss: object, var_name: str, joint_name: str, x: float, y: flo
         print(f'The joint with name "{globals()[var_name].name}", internally stored as "{var_name}", '
         f'has been assigned the location ({globals()[var_name].x}, {globals()[var_name].y})')
 
-
 def create_bar(truss: object, var_name: str, bar_name: str, first_joint_var_name: str,
                second_joint_var_name: str, params: dict = None, print_info=False):
     """
@@ -836,7 +835,6 @@ def create_bar(truss: object, var_name: str, bar_name: str, first_joint_var_name
         f'{globals()[second_joint_var_name].name}), internally stored as '
         f'({first_joint_var_name}, {second_joint_var_name}).')
 
-
 def create_load(truss: object, var_name: str, load_name: str,
                 joint_var_name: str, x: float, y: float, print_info=False):
     """
@@ -851,7 +849,6 @@ def create_load(truss: object, var_name: str, load_name: str,
         print(f'The load with name "{globals()[var_name].name}", internally stored as "{var_name}", '
         f'has been applied at joint named {globals()[joint_var_name].name}, internally stored as "{joint_var_name}", '
         f'with components ({x}, {y}).')
-
 
 def create_support(truss: object, var_name: str, support_name: str, joint_var_name: str,
                    support_type: str, roller_normal_vector: tuple = None, pin_rotation: float = 0,

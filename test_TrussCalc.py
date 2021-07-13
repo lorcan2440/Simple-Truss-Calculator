@@ -27,7 +27,6 @@ def solve_truss(truss, show_outputs=True):
             print(my_results)
             t.plot_diagram(truss, my_results, show_reactions=False)
     except np.linalg.LinAlgError as e:
-        print(type(e))
         truss.classify_error_in_truss(e)
 
 
@@ -70,7 +69,7 @@ def test_case_3():
     bars = (('AB', strong), ('BC', strong), ('AC', strong))
     loads = [('C', 1, 2)]
     supports = (('A', {'support_type': 'pin', 'pin_rotation': 90}), 
-                ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 1)})
+                ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
                 )
     truss = t.Truss(custom_params, 'N, m')
     return truss, joints, bars, loads, supports
@@ -79,7 +78,6 @@ def test_case_3():
 time = timeit.timeit(test_case_1, number=1)
 print(time)
 '''
-
 
 test_case_1()
 
