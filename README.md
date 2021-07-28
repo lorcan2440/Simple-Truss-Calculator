@@ -4,6 +4,7 @@ Calculator with display for finding internal/reaction forces, stresses and strai
 Intended for personal use only but documented as a module.
 Soon I hope to make it more user-friendly and interactive.
 
+
 ## To-do List and Future Aims
 
 * [x] Create a basic program - v0
