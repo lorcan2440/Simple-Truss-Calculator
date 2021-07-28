@@ -47,4 +47,4 @@ Soon I hope to make it more user-friendly and interactive.
 ## Donations
 
 If you found this especially useful, you could consider giving me a cuppa :coffee: :smile:
-[<img src="media/paypal_donate_button_transparent.png">](https://www.paypal.me/lorcan2440)
+[<img src="media/paypal_donate_button_transparent.png" width: 400px, height: auto>] (https://www.paypal.me/lorcan2440)
