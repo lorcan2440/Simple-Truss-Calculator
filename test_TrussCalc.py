@@ -1,7 +1,5 @@
-import Truss_Calculator as tc
-import numpy as np
-import string, timeit, unittest
-import timeit
+import Truss_Calculator as tc       # local file import
+import timeit, unittest             # builtins
 
 
 class TrussTests(unittest.TestCase):
@@ -22,7 +20,7 @@ class TrussTests(unittest.TestCase):
         medium_2    = {"b": 16,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
         strong      = {"b": 19,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
 
-        tc.create_truss('SDC: Truss Force Analysis')
+        tc.create_truss('SDC: Steel Cantilever')
         tc.create_joint('Joint A', 0, 0)
         tc.create_joint('Joint B', 290, -90)
         tc.create_joint('Joint C', 815, 127.5)
@@ -48,7 +46,7 @@ class TrussTests(unittest.TestCase):
             my_results = tc.active_truss.Result(tc.active_truss, sig_figs=3, 
                                                 solution_method=tc.SolveMethod.NUMPY_STD)
             print(my_results)
-        except np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
+        except tc.np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
             tc.active_truss.classify_error_in_truss(e)
 
         tc.plot_diagram(tc.active_truss, my_results, show_reactions=True)
@@ -117,6 +115,8 @@ def build_from_lists(joints, bars, loads, supports, **res_kwargs):
                                                          'roller_normal_vector': tuple[x, y]}
     """
 
+    import string
+
     _alpha = string.ascii_uppercase
     _nums = string.digits
     
@@ -134,7 +134,7 @@ def build_from_lists(joints, bars, loads, supports, **res_kwargs):
         print(my_results)
         return my_results
 
-    except np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
+    except tc.np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
         tc.active_truss.classify_error_in_truss(e)
 
 

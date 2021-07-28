@@ -861,6 +861,23 @@ def draw_support(x: float, y: float, size: float,
             plt.plot((x_pos, x_pos - size / 5), (y, y - size / 5),                  # hashed lines
                      linewidth=1, color='black', zorder=0)
 
+    if (support_type == 'pin' and pin_rotation != 0) or support_type == 'roller':
+        # NOTE: element indices are
+        # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
+        # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
+        # 14: ground left point, 15: ground right point
+        _old_pts = [
+                (x - size / 20, y - math.sqrt(3) * size / 20),
+                (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+                (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+                (x + size / 20, y - math.sqrt(3) * size / 20)
+            ] + [(x_pos, y - (size / 3 if support_type == 'pin' else 8/15 * size)) for x_pos, y_pos in \
+                zip(list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+            ] + [(x_pos - size / 5, y - (8/15 * size if support_type == 'pin' else 11/15 * size)) for x_pos, y_pos in \
+                zip(list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
+            ] + [(x - size / 2, y - (size / 3 if support_type == 'pin' else 8/15 * size)), 
+                 (x + size / 2, y - (size / 3 if support_type == 'pin' else 8/15 * size))]
+
     if support_type == 'pin':
         if pin_rotation == 0:
             # Pin symbol: triangle resting on ground
@@ -881,21 +898,8 @@ def draw_support(x: float, y: float, size: float,
                 plt.plot((x_pos, x_pos - size / 5), (y - size / 3, y - 8/15 * size),
                         linewidth=1, color='black', zorder=0)
         else:
-            # Transform the important points to be plotted: element indices are
-            # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
-            # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
-            # 14: ground left point, 15: ground right point
-            _new_pts = list(map(rot, [
-                (x - size / 20, y - math.sqrt(3) * size / 20),
-                (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-                (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-                (x + size / 20, y - math.sqrt(3) * size / 20)
-            ] + [(x_pos, y - size / 3) for x_pos, y_pos in zip(list(np.linspace(
-                    x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-            ] + [(x_pos - size / 5, y - 8/15 * size) for x_pos, y_pos in zip(list(np.linspace(
-                    x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-            ] + [(x - size / 2, y - size / 3), (x + size / 2, y - size / 3)]))
-
+            # Transform the important points to be plotted
+            _new_pts = list(map(rot, _old_pts))
             xtl, ytl = map(list, zip(*_new_pts))
 
             plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
@@ -915,26 +919,14 @@ def draw_support(x: float, y: float, size: float,
 
     if support_type == 'roller':
         # Roller symbol: pin with wheels, rotated about pin circle to show direction
-
-        # Transform the important points to be plotted: element indices are
-        # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
-        # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
-        # 14: ground left point, 15: ground right point
+        # Transform the important points to be plotted 
+        # NOTE: element indices are (0-15 unchanged) from pin
         # 16: wheel left centre point, 17: wheel right centre point
-        _new_pts = list(map(rot, [
-            (x - size / 20, y - math.sqrt(3) * size / 20),
-            (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-            (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-            (x + size / 20, y - math.sqrt(3) * size / 20)
-        ] + [(x_pos, y - 8/15 * size) for x_pos, y_pos in zip(list(np.linspace(
-                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-        ] + [(x_pos - size / 5, y - 11/15 * size) for x_pos, y_pos in zip(list(np.linspace(
-                x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-        ] + [(x - size / 2, y - 8/15 * size), (x + size / 2, y - 8/15 * size)
-        ] + [(x - (0.7 / (3 * math.sqrt(3))) * size, y - 13/30 * size),
-             (x + (0.7 / (3 * math.sqrt(3))) * size, y - 13/30 * size)
-        ]))
 
+        _old_pts += [(x - (0.7 / (3 * math.sqrt(3))) * size, y - 13/30 * size),
+             (x + (0.7 / (3 * math.sqrt(3))) * size, y - 13/30 * size)]
+
+        _new_pts = list(map(rot, _old_pts))
         xtl, ytl = map(list, zip(*_new_pts))
 
         plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
@@ -1087,9 +1079,9 @@ def create_support(support_name: str, joint_name: str, support_type: str,
 
 
 """---------------------------------------------------------------------------------------"""
-    #####################################################
-    #           PROGRAM EXECUTION STARTS HERE           #
-    #####################################################
+                    #####################################################
+                    #           PROGRAM EXECUTION STARTS HERE           #
+                    #####################################################
 """---------------------------------------------------------------------------------------"""
 
 import os
