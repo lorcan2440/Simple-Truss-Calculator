@@ -14,7 +14,7 @@ Soon I hope to make it more user-friendly and interactive.
   * [x] Make it show the result on a static diagram with `matplotlib`
   * [x] Add unit testing
  
- * [ ] Make the diagram interactive
+* [ ] Make the diagram interactive
 
   Goal: to make a simple editable truss calculator.
   
@@ -24,7 +24,6 @@ Soon I hope to make it more user-friendly and interactive.
   * [ ] Make the joints draggable
   * [ ] Make the loads/supports rotatable
   * [ ] Improve the speed of the program if necessary (want 60 fps animations)
-
 
 * [ ] Design a GUI
 
