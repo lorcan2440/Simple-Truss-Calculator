@@ -26,13 +26,13 @@ Soon I hope to make it more user-friendly and interactive.
   * [ ] Allow exporting and loading of complete truss objects in JSON file format
   * [ ] Add examples of module use
   * [ ] Add CI/CD and switch unit testing framework to pytest
-  * [ ] Publish as a python package
+  * [ ] Publish as a Python package
 
 * [ ] Convert to a PyQt5 application - v2
 
   Goal: to make a simple editable truss calculator.
 
-  * [ ] Set up Qt5 basics
+  * [ ] Set up `PyQt5` basics
   * [ ] Make the joints draggable
   * [ ] Make the loads/supports rotatable
   * [ ] Improve the speed of the calculator program if necessary (want 60 fps animations)
@@ -42,12 +42,12 @@ Soon I hope to make it more user-friendly and interactive.
   Goal: to give all the functionality of the code using buttons and text fields.
   
   * [ ] Add property manager menus for each object when clicked on
-  * [ ] Allow the option of eithe 2D or 3D trusses, using `mpl_toolkits.mplot3d` for 3D display.
+  * [ ] Allow the option of either 2D or 3D trusses, using `mpl_toolkits.mplot3d` for 3D display.
 
 
 * [ ] Implement truss optimisation
 
-  Goal: to find a truss which minimises/maximises a given objective (max failure load, min deflection, min fabrication cost, etc.) subject to certain constraints (number of joints, positions of supports, etc.) and display it given a starting truss from which to make    adjustments to.
+  Goal: to find a truss which minimises/maximises a given objective (max failure load, min deflection, min fabrication cost, etc.) subject to certain constraints (number of joints, positions of supports, etc.) and display it given a starting truss from which to make adjustments to.
 
 
 ## Why I made this
