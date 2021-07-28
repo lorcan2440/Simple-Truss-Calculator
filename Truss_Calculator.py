@@ -56,7 +56,8 @@ class Unit:
 
     """
     A class to contain the different units which can be used for measurements of the truss.
-    Also defines the unit conversion factors. Can see the different units using get_constants(SolveMethod).
+    Also defines the unit conversion factors. Can see the different units using get_constants(Unit).
+    TODO: implement a similar constants system as SolveMethod.
     """
 
     # units of force
@@ -717,7 +718,7 @@ def convert_to_valid_var_name(name: str, allow_existing_vars=True):
     to make it distinct, e.g. my_first_truss_2, my_first_truss_3, etc.
     """
 
-    import re, string
+    import re
 
     # remove trailing whitespace, convert to lowercase and replace spaces with underscores
     new_name = name.strip().lower().replace(' ', '_')
@@ -756,15 +757,22 @@ def set_active_truss(var_name: str):
 
 def get_active_truss():
     """
-    Gets the truss which is currently being built on.
+    Gets the truss which is currently being built on, or None if there is none.
+    NOTE: active_truss is a global var.
     """
-    return active_truss
+    return active_truss if has_active_truss() else None
 
 def is_active_truss(var_name: str):
     """
     Determines whether the given truss variable name is being built on.
     """
     return globals()[var_name] is active_truss
+
+def has_active_truss():
+    """
+    Determines whether an active truss has been set yet, returning True or False.
+    """
+    return 'active_truss' in globals().keys()
 
 def set_matplotlib_fullscreen():
     """
@@ -803,9 +811,8 @@ def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = Non
     if support is not None:
         if show_reactions:
             if support.support_type == 'roller':
-                used_angles.append(support.direction_of_reaction)
-            elif support.support_type in ['encastre', 'pin']:
-                used_angles.append(math.atan2(*reversed(results.reactions[support.name])))
+                used_angles.append(math.pi + support.direction_of_reaction)
+            used_angles.append(math.atan2(*reversed(results.reactions[support.name])))
         else:
             if support.support_type == 'pin':
                 used_angles.append(math.pi / 2 - support.pin_rotation)
@@ -815,7 +822,7 @@ def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = Non
     differences = [(used_angles[i] - used_angles[i-1]) % (2 * math.pi) for i in range(len(used_angles))]
     max_i = differences.index(max(differences))
     most_free_angle = np.average([used_angles[max_i], used_angles[max_i - 1]])
-    if used_angles[max_i - 1] > math.pi:
+    if used_angles[max_i] < used_angles[max_i - 1]:
         most_free_angle -= math.pi
 
     return math.degrees(most_free_angle) if as_degrees else most_free_angle
