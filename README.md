@@ -7,7 +7,7 @@ Soon I hope to make it more user-friendly and interactive.
 
 * [x] Make it show the result on a static diagram with `matplotlib`
 * [x] Add unit testing
-* [ ] Make the diagram interactive
+* [ ] Make the diagram interactive \n
   Goal: to make a simple editable truss calculator
   * [x] Allow creation of multiple trusses
   * [x] Allow joints/bars/etc to be given user-friendly names
