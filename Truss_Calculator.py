@@ -1,12 +1,19 @@
 """
-2D Truss Calculator
-Version 1.4
+Simple Truss Calculator
+
+Version:    1.3
+Source:     https://github.com/lorcan2440/Simple-Truss-Calculator
+By:         Lorcan Nicholls     
+Contact:    lnick2440@gmail.com
+Tests:      test_TrussCalc.py
+
+Calculator and interactive program for finding internal/reaction forces, 
+stresses and strains of a pin-jointed, straight-membered, plane truss. 
+Intended for personal use only; documented but not in a module form. 
+Soon I hope to make it more user-friendly and interactive.
 """
 
-from abc import abstractclassmethod
-import math, warnings, functools
-
-from scipy.sparse.linalg.matfuncs import ProductOperator                                   # builtin modules
+import math, warnings, functools                                    # builtin modules
 
 # Automatically install missing modules, least likely to be already installed first
 try:
