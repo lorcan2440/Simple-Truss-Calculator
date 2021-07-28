@@ -1,5 +1,5 @@
 import Truss_Calculator as tc       # local file import
-import timeit, unittest             # builtins
+import timeit, unittest
 
 
 class TrussTests(unittest.TestCase):
@@ -7,18 +7,29 @@ class TrussTests(unittest.TestCase):
     """
     Unit testing framework for the truss calculator.
     Values verified with https://skyciv.com/free-truss-calculator/.
+
+    TODO:   add some more edge cases
+
+    TODO:   if there are multiple loads/supports, label their names at
+            the arrow middle or support normal direction instead of using `find_free_space_around_joint()`.
+
+    TODO:   if a reaction force is zero, do not show its arrow even if `show_reactions` is `True`.
     """
+
+    global weak, medium_1, medium_2, strong
+
+    weak        = {"b": 12.5,   "t": 0.7,   "D": 5,     "E": 210,   "strength_max": 0.216}
+    medium_1    = {"b": 16,     "t": 0.9,   "D": 5,     "E": 210,   "strength_max": 0.216}
+    medium_2    = {"b": 16,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
+    strong      = {"b": 19,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
+
 
     def test_SDC_truss(self):
 
         """
-        This test represents the truss built in the SDC project.
+        Case 1: standard well-built truss. Uses the module factory functions.
+        Represents the truss built in the SDC project.
         """
-
-        weak        = {"b": 12.5,   "t": 0.7,   "D": 5,     "E": 210,   "strength_max": 0.216}
-        medium_1    = {"b": 16,     "t": 0.9,   "D": 5,     "E": 210,   "strength_max": 0.216}
-        medium_2    = {"b": 16,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
-        strong      = {"b": 19,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
 
         tc.create_truss('SDC: Steel Cantilever')
         tc.create_joint('Joint A', 0, 0)
@@ -55,13 +66,8 @@ class TrussTests(unittest.TestCase):
     def test_multiple_loads(self):
 
         """
-        A truss with multiple loads on different joints.
+        Case 2: A truss with multiple loads on different joints.
         """
-
-        # TODO: fix load label location 
-        # (determining whether to add pi to angle or not) as one looks weird
-
-        strong      = {"b": 19,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
 
         joints = ((0, 0), (5, 0), (0, 4), (2, 6))
         bars = (('AC', strong), ('BC', strong), ('CD', strong), ('BD', strong))
@@ -78,10 +84,8 @@ class TrussTests(unittest.TestCase):
     def test_with_angled_roller(self):
 
         """
-        A truss with a roller support at an angle.
+        Case 3: A truss with a roller support at an inclined angle.
         """
-
-        strong      = {"b": 19,     "t": 1.1,   "D": 5,     "E": 210,   "strength_max": 0.216}
 
         joints = ((0, 1), (1, 0), (1, 1))
         bars = (('AB', strong), ('BC', strong), ('AC', strong))
@@ -95,24 +99,86 @@ class TrussTests(unittest.TestCase):
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
-                
 
-def build_from_lists(joints, bars, loads, supports, **res_kwargs):
+
+    def test_unloaded_truss(self):
+
+        """
+        Case 4: A truss without any applied external loads.
+        """
+
+        joints = ((0, 1), (1, 0), (1, 1))
+        bars = (('AB', strong), ('BC', strong), ('AC', strong))
+        loads = []
+        supports = (('A', {'support_type': 'pin', 'pin_rotation': 90}), 
+                    ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
+                    )
+
+        tc.create_truss('Completely unloaded truss')
+        results = build_from_lists(joints, bars, loads, supports,
+                                   sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.plot_diagram(tc.active_truss, results, show_reactions=True)
+
+
+    def test_multiple_loads_on_same_joint(self):
+
+        """
+        Case 5: A truss with mutliple loads on the same joint which do not cancel out.
+        """
+
+        joints = ((0, 1), (1, 0), (1, 1))
+        bars = (('AB', strong), ('BC', strong), ('AC', strong))
+        loads = [('C', 1, 2), ('C', 0, -1)]
+        supports = (('A', {'support_type': 'pin', 'pin_rotation': 90}), 
+                    ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
+                    )
+
+        tc.create_truss('Multiple loads on the same joint')
+        results = build_from_lists(joints, bars, loads, supports,
+                                   sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.plot_diagram(tc.active_truss, results, show_reactions=True)
+
+
+    def test_with_fully_cancelling_loads(self):
+
+        """
+        Case 6: A truss with multiple loads on the same joint which do cancel out 
+        giving an effectively unloaded truss.
+        """
+
+        joints = ((0, 1), (1, 0), (1, 1))
+        bars = (('AB', strong), ('BC', strong), ('AC', strong))
+        loads = [('C', 1, 2), ('C', -1, -2)]
+        supports = (('A', {'support_type': 'pin', 'pin_rotation': 90}), 
+                    ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
+                    )
+
+        tc.create_truss('All external loads cancel out')
+        results = build_from_lists(joints, bars, loads, supports,
+                                   sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.plot_diagram(tc.active_truss, results, show_reactions=True)
+
+
+def build_from_lists(joints: tuple[tuple[float]], bars: tuple[tuple[str, dict]], 
+                     loads: list[tuple[str, float, float]], supports: tuple[tuple[str, dict]], **res_kwargs):
 
     """
     Allows quick construction of full trusses given lists in an appropriate format:
 
-    joints:     tuple[tuple[x, y]]                      named in order by default A, B, C, ...
+    joints: `((x1, y1), (x2, y2), ...)` named in order by default A, B, C, ...
 
-    bars:       tuple[tuple[bar_name, bar_params]]      bar_name is a two-char string, using the letters from 
-                                                        the joints to indicate which ones it goes between
+    bars: `(('AB', strong), ('BC', weak), ...)` bar_name is a two-char string, 
+    using the letters from the joints to indicate which ones it goes between
 
-    loads:      list[tuple[joint_name, x, y]]           joint_name is a one-char string, indicating the loaded joint
+    loads: `[('A', x1, y1), ('C', x2, y2), ...]` joint_name is a one-char string, indicating the loaded joint
 
-    supports:   tuple[tuple[joint_name, kwargs]]        joint_name is a one-char string, indicating the supported joint
-                                                        kwargs can be a dict which fills any of the following:
-                                                        {'support_type': pin/roller/encastre, 'pin_rotation': angle,
-                                                         'roller_normal_vector': tuple[x, y]}
+    supports: `(('A', kwargs1), ('B', kwargs2), ...)`
+    joint_name is a one-char string, indicating the supported joint kwargs can be a dict which fills any of 
+    the following:
+    `{'support_type': 'pin'/'roller'/'encastre', 'pin_rotation': angle_in_degrees, 'roller_normal_vector': (x, y)}`
     """
 
     import string
@@ -140,4 +206,4 @@ def build_from_lists(joints, bars, loads, supports, **res_kwargs):
 
 if __name__ == '__main__':
 
-    unittest.main()
+    unittest.main(verbosity=2)

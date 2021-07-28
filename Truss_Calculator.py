@@ -54,12 +54,6 @@ class SolveMethod:
 
 class Unit:
 
-    """
-    A class to contain the different units which can be used for measurements of the truss.
-    Also defines the unit conversion factors. Can see the different units using get_constants(Unit).
-    TODO: implement a similar constants system as SolveMethod.
-    """
-
     # units of force
     NEWTONS = "N"; KILONEWTONS = "kN"; POUND_FORCE = "lbf"
     # units of length
@@ -382,27 +376,16 @@ class Truss(metaclass=ClassIter):
 
             all_directions[joint.name] = directions
 
-        # Store the coefficients of the unknowns in each equation
-        coefficients = []
+        # Store the coefficients of the unknowns (internal forces/reactions) and constants (loads) in each equation
+        coefficients, constants = [], []
         for joint_name in joint_names:
             current_line = [round(math.cos(all_directions[joint_name].get(var, math.pi/2)), 10) for var in wanted_vars]
             coefficients.append(current_line)
             current_line = [round(math.sin(all_directions[joint_name].get(var, 0)), 10) for var in wanted_vars]
             coefficients.append(current_line)
-
-        # Store the constants of each equation, negative since they are on the other side of the system of equations
-        constants = []
-        for joint_name in joint_names:
-            try:
-                constants.append([-1 * sum(load.x) for load in 
-                                  self.get_all_loads_at_joint_by_name(joint_name)])
-                constants.append([-1 * sum(load.y) for load in
-                                  self.get_all_loads_at_joint_by_name(joint_name)])
-            except TypeError:
-                constants.append([-1 * load.x for load in
-                                  self.get_all_loads_at_joint_by_name(joint_name)])
-                constants.append([-1 * load.y for load in
-                                  self.get_all_loads_at_joint_by_name(joint_name)])
+            loads_here = self.get_all_loads_at_joint_by_name(joint_name)
+            constants.append([-1 * sum([load.x for load in loads_here])])
+            constants.append([-1 * sum([load.y for load in loads_here])])
 
         # Sanitise load data
         for i in range(len(constants)):
@@ -411,7 +394,6 @@ class Truss(metaclass=ClassIter):
         
         # Solve the system - both coefficient and constant matrices are 
         # sparse (for most practical cases) so ideally the SCIPY method is faster.
-
         if solution_method is SolveMethod.NUMPY_STD:
             m, b = np.matrix(coefficients), np.matrix(constants)
             x = np.linalg.inv(m) * b
@@ -479,6 +461,24 @@ class Truss(metaclass=ClassIter):
             being globally statically determinate. It cannot be solved.''')
         else:
             raise TypeError("Something else went wrong. Couldn't identify the problem.")
+
+    def export_truss_to_json(self, filedir: str = None):
+        """
+        Writes the details of the truss, with the results if available, to
+        a JSON file which can be read using `load_truss_from_json()`.
+        """
+
+        filedir = str(convert_to_valid_var_name(self.name) + '.json') if filedir is None else filedir
+        pass
+
+    def load_truss_from_json(self, filedir: str = None):
+        """
+        Builds a truss from a JSON file provided by `export_truss_to_json()`. 
+        If the results are available, they can be showed.
+        """
+
+        filedir = str(convert_to_valid_var_name(self.name) + '.json') if filedir is None else filedir
+        pass
 
     @classmethod
     def _delete_truss(cls):
@@ -597,7 +597,8 @@ class Truss(metaclass=ClassIter):
 
 # TRUSS INNER CLASSES END HERE, MAIN RESULTS FUNCTIONS START HERE
 
-def plot_diagram(truss: Truss, results: Truss.Result, show_reactions=False, delete_truss_after=True):
+def plot_diagram(truss: Truss, results: Truss.Result, 
+                 show_reactions: bool = False, delete_truss_after: bool = True):
     """
      Create a matplotlib output image showing the truss geometry,
      annotated with arrows and labels.
