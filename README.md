@@ -1,4 +1,5 @@
 # Simple Truss Calculator
+
 Calculator with display for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss.
 Intended for personal use only but documented as a module.
 Soon I hope to make it more user-friendly and interactive.
@@ -42,6 +43,11 @@ Soon I hope to make it more user-friendly and interactive.
 * [ ] Implement truss optimisation
 
   Goal: to find a truss which minimises/maximises a given objective (max failure load, min deflection, min fabrication cost, etc.) subject to certain constraints (number of joints, positions of supports, etc.) and display it given a starting truss from which to make    adjustments to.
+
+
+## Credits
+
+The idea for creating this program came from the Structural Design Course (SDC) long lab project in Part IA (1st year) of the Engineering course at the University of Cambridge.
 
 
 ## Donations
