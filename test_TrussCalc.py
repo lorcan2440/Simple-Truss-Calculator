@@ -1,11 +1,10 @@
 import Truss_Calculator as tc       # local file import
 import timeit, unittest
 
-
 class TrussTests(unittest.TestCase):
 
     """
-    Unit testing framework for the truss calculator.
+    Unit tess for verifying forces and visual appearance of the truss calculator.
     Values verified with https://skyciv.com/free-truss-calculator/.
 
     TODO:   add some more edge cases
@@ -14,6 +13,8 @@ class TrussTests(unittest.TestCase):
             the arrow middle or support normal direction instead of using `find_free_space_around_joint()`.
 
     TODO:   if a reaction force is zero, do not show its arrow even if `show_reactions` is `True`.
+
+    TODO:   implement constants for entering unit systems.
     """
 
     global weak, medium_1, medium_2, strong
@@ -31,7 +32,8 @@ class TrussTests(unittest.TestCase):
         Represents the truss built in the SDC project.
         """
 
-        tc.create_truss('SDC: Steel Cantilever')
+        tc.init_truss('SDC: Steel Cantilever')
+
         tc.create_joint('Joint A', 0, 0)
         tc.create_joint('Joint B', 290, -90)
         tc.create_joint('Joint C', 815, 127.5)
@@ -74,7 +76,7 @@ class TrussTests(unittest.TestCase):
         loads = [('C', 1000, 0), ('D', 0, -750)]
         supports = (('A', {'support_type': 'pin'}), ('B', {'support_type': 'pin'}))
 
-        tc.create_truss('Multiple loads')
+        tc.init_truss('Multiple loads')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
@@ -94,7 +96,7 @@ class TrussTests(unittest.TestCase):
                     ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
                     )
 
-        tc.create_truss('Angled roller support')
+        tc.init_truss('Angled roller support')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
@@ -114,7 +116,7 @@ class TrussTests(unittest.TestCase):
                     ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
                     )
 
-        tc.create_truss('Completely unloaded truss')
+        tc.init_truss('Completely unloaded truss')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
@@ -134,7 +136,7 @@ class TrussTests(unittest.TestCase):
                     ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
                     )
 
-        tc.create_truss('Multiple loads on the same joint')
+        tc.init_truss('Multiple loads on the same joint')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
@@ -155,7 +157,7 @@ class TrussTests(unittest.TestCase):
                     ('B', {'support_type': 'roller', 'roller_normal_vector': (-1, 2)})
                     )
 
-        tc.create_truss('All external loads cancel out')
+        tc.init_truss('All external loads cancel out')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 

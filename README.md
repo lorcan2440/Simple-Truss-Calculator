@@ -41,3 +41,15 @@ Soon I hope to make it more user-friendly and interactive.
 * [ ] Implement truss optimisation
 
   Goal: to find a truss which minimises/maximises a given objective (max failure load, min deflection, min fabrication cost, etc.) subject to certain constraints (number of joints, positions of supports, etc.) and display it given a starting truss from which to make    adjustments to.
+
+
+## Donations
+
+If you found this especially useful, you could consider giving me a cuppa :coffee: :smile:
+[<img src="media/paypal_donate_button_transparent.png">](https://www.paypal.me/lorcan2440)
+
+
+
+
+
+

@@ -3,17 +3,17 @@
 Version 1.4
 """
 
-import math, warnings
-from functools import total_ordering
+from abc import abstractclassmethod
+import math, warnings, functools
 
-import matplotlib                    # builtin modules
+from scipy.sparse.linalg.matfuncs import ProductOperator                                   # builtin modules
 
 # Automatically install missing modules, least likely to be already installed first
 try:
-    import sigfig                                       # required for rounding values nicely
-    from scipy.sparse import linalg, csr_matrix         # used for faster solving
-    from matplotlib import pyplot as plt                # used to display graphical output
-    import numpy as np                                  # used to do matrix operations
+    import sigfig                                                   # required for rounding values nicely
+    from scipy.sparse import (csr_matrix, linalg as linsolver)      # used for faster solving
+    from matplotlib import pyplot as plt                            # used to display graphical output
+    import numpy as np                                              # used to do matrix operations
 
 except ImportError:
     import subprocess, sys
@@ -23,7 +23,7 @@ except ImportError:
 finally:
     import numpy as np
     from matplotlib import pyplot as plt
-    from scipy.sparse import linalg as linsolver, csr_matrix
+    from scipy.sparse import (csr_matrix, linalg as linsolver)
     import sigfig
 
 
@@ -72,7 +72,7 @@ class Unit:
 
 # MAIN CLASS FOR TRUSSES
 
-@total_ordering
+@functools.total_ordering
 class Truss(metaclass=ClassIter):
     """
     A class containing the truss to be worked with.
@@ -419,7 +419,7 @@ class Truss(metaclass=ClassIter):
             output_dict[support.name] = (float(x[_i]), float(x[_i + 1]))
             _i += 2
 
-        # For whatever reason, sometimes the pin jointed reaction forces are wrong.
+        # HACK: For whatever reason, sometimes the pin jointed reaction forces are wrong.
         # Couldn't be bothered fixing the root cause so correct them here by resolving at the supports.
         for support in self.get_all_supports():
             reaction_corrected = [0, 0]
@@ -464,21 +464,21 @@ class Truss(metaclass=ClassIter):
 
     def export_truss_to_json(self, filedir: str = None):
         """
-        Writes the details of the truss, with the results if available, to
+        TODO: Writes the details of the truss, with the results if available, to
         a JSON file which can be read using `load_truss_from_json()`.
         """
 
         filedir = str(convert_to_valid_var_name(self.name) + '.json') if filedir is None else filedir
-        pass
+        raise NotImplemented
 
     def load_truss_from_json(self, filedir: str = None):
         """
-        Builds a truss from a JSON file provided by `export_truss_to_json()`. 
+        TODO: Builds a truss from a JSON file provided by `export_truss_to_json()`. 
         If the results are available, they can be showed.
         """
 
         filedir = str(convert_to_valid_var_name(self.name) + '.json') if filedir is None else filedir
-        pass
+        raise NotImplemented
 
     @classmethod
     def _delete_truss(cls):
@@ -648,8 +648,8 @@ def plot_diagram(truss: Truss, results: Truss.Result,
                       LEN * math.sin(direction_of_reaction),
                       head_width=LEN/5, head_length=LEN/4, facecolor='red')
 
+        # TODO: if there is another support at this `support.joint`, label it at an angle of `180 + pin_rotation`
         label_angle = find_free_space_around_joint(support.joint, results, show_reactions=show_reactions)
-
         plt.text(support.joint.x + 0.9 * LEN * math.cos(label_angle),
                  support.joint.y + 0.9 * LEN * math.sin(label_angle),
                  support.name, va='center', ha='left' if -90 < math.degrees(label_angle) <= 90 else 'right',
@@ -662,16 +662,16 @@ def plot_diagram(truss: Truss, results: Truss.Result,
     # Plot all loads
     for load in truss.get_all_loads():
 
-        label_angle = find_free_space_around_joint(load.joint)
-
         plt.arrow(load.joint.x, load.joint.y, LEN * math.cos(load.direction), LEN * math.sin(load.direction),
                   head_width=LEN / 5, head_length=LEN / 4)
 
+        # TODO: if there is another load at this `load.joint`, label it at the arrow midpoint + normal a bit
+        label_angle = find_free_space_around_joint(load.joint)
         plt.text(load.joint.x + LEN / 3 * math.cos(label_angle), load.joint.y + LEN / 3 * math.sin(label_angle),
                  f'{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units.split(",")[0]}',
                  va='center', ha='left' if -90 < math.degrees(label_angle) <= 90 else 'right')
 
-    # Delete the truss registry to avoid issues if building another truss
+    # HACK: Clear the truss registry to avoid issues if building another truss
     if delete_truss_after:
         truss._delete_truss()
 
@@ -966,11 +966,11 @@ This is done by directly accessing the globals() dictionary
 and adding {var_name : some_object_reference} to it.
 '''
 
-def create_truss(truss_name: str, bar_params: dict = None, units: str = 'kN, mm', 
+def init_truss(truss_name: str, bar_params: dict = None, units: str = 'kN, mm', 
                  set_as_active_truss: bool = True, var_name: str = None, print_info = False):
     """
-    Create an instance of a support in a truss, with a user defined name support_name,
-    stored internally as var_name, at joint variable name string joint_var_name.
+    Initialise an empty truss with name `truss_name`, optionally set the default `bar_params`
+    and the `units` in which the calculations should be done and displayed.
     """
 
     var_name = convert_to_valid_var_name(truss_name) if var_name is None else var_name
@@ -1104,7 +1104,7 @@ if __name__ == "__main__":
 
     # Define some custom bar parameters and initialise the truss
     custom_params = weak
-    create_truss('My First Truss', bar_params=custom_params, units='kN, mm')
+    init_truss('My First Truss', bar_params=custom_params, units='kN, mm')
 
     # Step 1. Create the joints
     create_joint('Joint A', 0, 0)
