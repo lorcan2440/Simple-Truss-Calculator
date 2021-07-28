@@ -821,8 +821,8 @@ def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = Non
 
     differences = [(used_angles[i] - used_angles[i-1]) % (2 * math.pi) for i in range(len(used_angles))]
     max_i = differences.index(max(differences))
-    most_free_angle = np.average([used_angles[max_i], used_angles[max_i - 1]])
-    if used_angles[max_i] < used_angles[max_i - 1]:
+    most_free_angle = np.average([used_angles[max_i], used_angles[max_i-1]])
+    if used_angles[max_i] < used_angles[max_i-1]:
         most_free_angle -= math.pi
 
     return math.degrees(most_free_angle) if as_degrees else most_free_angle
