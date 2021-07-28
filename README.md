@@ -4,7 +4,7 @@ Calculator with display for finding internal/reaction forces, stresses and strai
 Intended for personal use only but documented as a module.
 Soon I hope to make it more user-friendly and interactive.
 
-## TODOs
+## To-do List and Future Aims
 
 * [x] Create a basic program - v0
 
@@ -45,9 +45,9 @@ Soon I hope to make it more user-friendly and interactive.
   Goal: to find a truss which minimises/maximises a given objective (max failure load, min deflection, min fabrication cost, etc.) subject to certain constraints (number of joints, positions of supports, etc.) and display it given a starting truss from which to make    adjustments to.
 
 
-## Credits
+## Why I made this
 
-The idea for creating this program came from the Structural Design Course (SDC) long lab project in Part IA (1st year) of the Engineering course at the University of Cambridge.
+The idea for creating this program came from the Structural Design Course (SDC) long lab project in Part IA (1st year) of the Engineering course at the University of Cambridge. I originally wrote about 30 lines of code just to check some calculations of my own, then thought about making it work for any truss so I could improve it. After the lab ended I continued working on it in my spare time just for fun. Maybe someone else can get some use out of it too..?
 
 
 ## Donations
