@@ -1,6 +1,6 @@
 # Simple Truss Calculator
-Calculator and interactive program for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss.
-Intended for personal use only; documented but not in a module form. 
+Calculator with display for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss.
+Intended for personal use only but documented as a module.
 Soon I hope to make it more user-friendly and interactive.
 
 ## TODOs
