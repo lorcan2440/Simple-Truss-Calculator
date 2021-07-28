@@ -5,14 +5,18 @@ Soon I hope to make it more user-friendly and interactive.
 
 ## TODOs
 
-* [x] Make it show the result on a static diagram with `matplotlib`
+* [x] Create a basic program
 
-* [x] Add unit testing
+  Goal: to make a simple once-per-use calculator.
 
-* [ ] Make the diagram interactive
+  * [x] Create the core program using an object-oriented approach
+  * [x] Add factory functions to build the objects
+  * [x] Make it show the result on a static diagram with `matplotlib`
+  * [x] Add unit testing
+ 
+ * [ ] Make the diagram interactive
 
-
-  Goal: to make a simple editable truss calculator
+  Goal: to make a simple editable truss calculator.
   
   * [x] Allow creation of multiple trusses
   * [x] Allow joints/bars/etc to be given user-friendly names
@@ -21,11 +25,13 @@ Soon I hope to make it more user-friendly and interactive.
   * [ ] Make the loads/supports rotatable
   * [ ] Improve the speed of the program if necessary (want 60 fps animations)
 
+
 * [ ] Design a GUI
 
   Goal: to give all the functionality of the code using buttons and text fields.
   
   * [ ] Add property manager menus for each object when clicked on
+
 
 * [ ] Implement truss optimisation
 
