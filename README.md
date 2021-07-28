@@ -40,6 +40,7 @@ Soon I hope to make it more user-friendly and interactive.
   Goal: to give all the functionality of the code using buttons and text fields.
   
   * [ ] Add property manager menus for each object when clicked on
+  * [ ] Allow the option of eithe 2D or 3D trusses, using `mpl_toolkits.mplot3d` for 3D display.
 
 
 * [ ] Implement truss optimisation
