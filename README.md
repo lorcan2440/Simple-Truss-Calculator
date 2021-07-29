@@ -10,7 +10,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
 
 ## To-do List and Future Aims
 
-* [x] Create a basic program - v0
+### * [x] Create a basic program - v0
 
   Goal: to make a simple once-per-use calculator.
 
