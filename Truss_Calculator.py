@@ -630,7 +630,7 @@ class Truss(metaclass=ClassIter):
 
         # write to the chosen JSON file location
         with open(out_file_dir, 'w') as f:
-            json.dump(json_dict, f)
+            json.dump(json_dict, f, indent=4)
 
     def load_truss_from_json(self, file: str,
                              show_if_results: bool = True, set_as_active_truss: bool = True):
@@ -1374,7 +1374,7 @@ if __name__ == "__main__":
 
     # Define some custom bar parameters and initialise the truss
     custom_params = weak
-    init_truss('My First Truss', bar_params=custom_params, units='kN, mm')
+    init_truss('SDC: Steel Cantilever', bar_params=custom_params, units='kN, mm')
 
     # Step 1. Create the joints
     create_joint('Joint A', 0, 0)
