@@ -75,4 +75,5 @@ The idea for creating this program came from the Structural Design Course (SDC) 
 If you found this especially useful, you could consider giving me a cuppa :coffee: :smile:
 
 [<img src="media/paypal_donate_button_transparent.png" width=84, height=50>](https://www.paypal.me/lorcan2440)
+&emsp;&emsp;
 [<img src="media/buy_me_a_coffee.png" width=99, height=50>](https://www.buymeacoffee.com/lorcan)
