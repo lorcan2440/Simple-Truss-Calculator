@@ -4,6 +4,8 @@ Calculator with display for finding internal/reaction forces, stresses and strai
 Intended for personal use only but documented as a module.
 Soon I hope to make it more user-friendly and interactive.
 
+Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
+
 
 ## To-do List and Future Aims
 
@@ -15,6 +17,7 @@ Soon I hope to make it more user-friendly and interactive.
   * [x] Add factory functions to build the objects
   * [x] Make it show the result on a static diagram with `matplotlib`
   * [x] Add unit testing
+ 
  
 * [ ] Make the program more generalised - v1
 
@@ -28,6 +31,7 @@ Soon I hope to make it more user-friendly and interactive.
   * [ ] Add CI/CD and switch unit testing framework to pytest
   * [ ] Publish as a Python package
 
+
 * [ ] Convert to a PyQt5 application - v2
 
   Goal: to make a simple editable truss calculator.
@@ -36,7 +40,17 @@ Soon I hope to make it more user-friendly and interactive.
   * [ ] Make the joints draggable
   * [ ] Make the loads/supports rotatable
   * [ ] Improve the speed of the calculator program if necessary (want 60 fps animations)
+  
+  
+* [ ] Extend the calculations further (no FEA)
 
+  Goal: to provide additional functionality to the results of the calculator.
+  
+  * [ ] Calculate displacements using virtual work and display the deformed truss
+  * [ ] For bars in compression, show their buckled shapes with the option of taking into account an initial imperfection
+  * [ ] Add the option of using double-members to avoid buckling
+  
+  
 * [ ] Design a GUI
 
   Goal: to give all the functionality of the code using buttons and text fields.
