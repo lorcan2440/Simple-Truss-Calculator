@@ -190,7 +190,7 @@ class Truss(metaclass=ClassIter):
 
             # physical and geometric properties of the bar, as defined on databook pg. 8
             [setattr(self, attr, self.params[attr]) for attr in ["b", "t", "D", "E", "strength_max"]]
-            self.length = math.sqrt((self.first_joint.x - self.second_joint.x)**2 + \
+            self.length = math.sqrt((self.first_joint.x - self.second_joint.x)**2 +  # noqa \
                 (self.first_joint.y - self.second_joint.y)**2)
             self.section_area = (self.b ** 2 - (self.b - self.t) ** 2) * 1.03
             self.effective_area = (1.5 * self.b - self.D) * 0.9 * self.t
@@ -466,7 +466,7 @@ class Truss(metaclass=ClassIter):
         for joint_name in joint_names:
 
             # get the coefficients (matrix M), representing the unknown internal/reaction forces
-            current_line = [round(math.cos(all_directions[joint_name].get(var, math.pi / 2)), 10) \
+            current_line = [round(math.cos(all_directions[joint_name].get(var, math.pi / 2)), 10)
                 for var in wanted_vars]
             coefficients.append(current_line)
             current_line = [round(math.sin(all_directions[joint_name].get(var, 0)), 10) for var in wanted_vars]
@@ -708,10 +708,10 @@ class Truss(metaclass=ClassIter):
         """
 
         if not str_names_only:
-            return [bar for bar in Truss.Bar \
+            return [bar for bar in Truss.Bar
                 if joint.name in {bar.first_joint.name, bar.second_joint.name}]
         else:
-            return {bar.name for bar in Truss.Bar \
+            return {bar.name for bar in Truss.Bar
                 if joint.name in {bar.first_joint.name, bar.second_joint.name}}
 
     @staticmethod
@@ -833,7 +833,7 @@ def plot_diagram(truss: Truss, results: Truss.Result,
     for support in truss.get_all_supports():
 
         plt.plot(support.joint.x, support.joint.y, '*', markersize=0,
-                 label=support.name + ': ' + str(results.reactions[support.name]) + ' ' + \
+                 label=support.name + ': ' + str(results.reactions[support.name]) + ' ' +  # noqa \
                  truss.units.split(',')[0])
 
     for support in truss.get_all_supports():
@@ -1053,7 +1053,7 @@ def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = Non
     support = truss.get_support_by_joint(joint)
 
     # find the angles occupied due to bars being there
-    used_angles = [bar.get_direction(origin_joint=joint) \
+    used_angles = [bar.get_direction(origin_joint=joint)
         for bar in truss.get_all_bars_connected_to_joint(joint)]
 
     # find the angles occupied due to load arrows being there
@@ -1131,7 +1131,7 @@ def draw_support(x: float, y: float, size: float,
             (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
             (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
             (x + size / 20, y - math.sqrt(3) * size / 20)
-        ] + [(x_pos, y - (size / 3 if support_type == 'pin' else 8 / 15 * size)) \
+        ] + [(x_pos, y - (size / 3 if support_type == 'pin' else 8 / 15 * size))
             for x_pos, y_pos in zip(list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
         ] + [(x_pos - size / 5, y - (8/15 * size if support_type == 'pin' else 11/15 * size))  # noqa \     
             for x_pos, y_pos in zip(list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)

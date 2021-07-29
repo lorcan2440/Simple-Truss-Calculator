@@ -64,7 +64,7 @@ class TrussTests(unittest.TestCase):
         except tc.np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
             tc.active_truss.classify_error_in_truss(e)
 
-        tc.active_truss.dump_truss_to_json()
+        tc.active_truss.dump_truss_to_json(filedir='outputs')
 
         tc.plot_diagram(tc.active_truss, my_results, show_reactions=True)
 
