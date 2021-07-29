@@ -10,7 +10,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
 
 ## To-do List and Future Aims
 
-### * [x] Create a basic program - v0
+### Create a basic program - v0
 
   Goal: to make a simple once-per-use calculator.
 
@@ -20,7 +20,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
   * [x] Add unit testing
  
  
-* [ ] Make the program more generalised - v1
+### Make the program more generalised - v1
 
   Goal: to make it easier to work in a more modular form.
   
@@ -33,7 +33,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
   * [ ] Publish as a Python package
 
 
-* [ ] Convert to a PyQt5 application - v2
+### Convert to a PyQt5 application - v2
 
   Goal: to make a simple editable truss calculator.
 
@@ -43,7 +43,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
   * [ ] Improve the speed of the calculator program if necessary (want 60 fps animations)
   
   
-* [ ] Extend the calculations further (no FEA)
+### Extend the calculations further (no FEA)
 
   Goal: to provide additional functionality to the results of the calculator.
   
@@ -52,7 +52,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
   * [ ] Add the option of using double-members to avoid buckling
   
   
-* [ ] Design a GUI
+### Design a GUI
 
   Goal: to give all the functionality of the code using buttons and text fields.
   
@@ -60,7 +60,7 @@ Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA
   * [ ] Allow the option of either 2D or 3D trusses, using `mpl_toolkits.mplot3d` for 3D display.
 
 
-* [ ] Implement truss optimisation
+### Implement truss optimisation
 
   Goal: to find a truss which minimises/maximises a given objective (max failure load, min deflection, min fabrication cost, etc.) subject to certain constraints (number of joints, positions of supports, etc.) and display it given a starting truss from which to make adjustments to.
 
