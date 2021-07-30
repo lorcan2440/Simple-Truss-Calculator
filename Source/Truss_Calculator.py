@@ -1407,6 +1407,6 @@ if __name__ == "__main__":
     except np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
         active_truss.classify_error_in_truss(e)
 
-    active_truss.dump_truss_to_json(filedir='outputs')
+    active_truss.dump_truss_to_json(filedir='./Saved Trusses')
 
     plot_diagram(active_truss, my_results, show_reactions=True)
