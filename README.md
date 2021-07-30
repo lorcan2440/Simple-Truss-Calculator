@@ -5,7 +5,7 @@ Calculator with display for finding internal/reaction forces, stresses and strai
 100% Python; intended for personal use only but documented as a module.
 Soon I hope to make it more user-friendly and interactive.
 
-Assumes linear elasticity: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
+Assumes linear elasticity and small deflections: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
 
 
 ## To-do List and Future Aims
