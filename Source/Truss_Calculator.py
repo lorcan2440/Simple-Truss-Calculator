@@ -1,3 +1,5 @@
+# pyright: reportMissingModuleSource=false
+
 """
 Simple Truss Calculator
 
@@ -39,7 +41,8 @@ finally:
     import sigfig
 
 
-global active_truss, LEN  # globals: `active_truss: Truss; LEN: float`
+# globals: `active_truss: Truss; LEN: float`
+global active_truss, LEN
 
 
 # Utility/helper classes
@@ -204,9 +207,7 @@ class Truss(metaclass=ClassIter):
             -pi/2 = vertical down, pi = horizontal left, etc. (-pi < angle <= pi).
             """
 
-            connected_joints = self.truss.get_all_joints_connected_to_bar(self)
-
-            if origin_joint in connected_joints:
+            if origin_joint in (connected_joints := self.truss.get_all_joints_connected_to_bar(self)):
                 other_joint_index = 1 - connected_joints.index(origin_joint)
                 angle = math.atan2(connected_joints[other_joint_index].y - origin_joint.y,
                                    connected_joints[other_joint_index].x - origin_joint.x)
@@ -215,12 +216,12 @@ class Truss(metaclass=ClassIter):
                 # if no joint is specified, the joint is chosen such that the angle
                 # is not upside-down (used to allign the text along the bars)
                 angle_from_first = self.get_direction(self.first_joint, as_degrees=as_degrees)
-                angle_from_second = self.get_direction(self.second_joint, as_degrees=as_degrees)
                 if as_degrees and -90 < angle_from_first <= 90 or \
                         not as_degrees and -1 * math.pi / 2 < angle_from_first <= math.pi / 2:
                     return angle_from_first
+
                 else:
-                    return angle_from_second
+                    return self.get_direction(self.second_joint, as_degrees=as_degrees)
 
             else:
                 raise SyntaxError(f'The bar "{self.name}" has an invalid origin joint when finding \n'
