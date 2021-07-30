@@ -15,13 +15,17 @@ Intended for personal use only; documented but not in a module form.
 Soon I hope to make it more user-friendly and interactive.
 """
 
-# builtin modules
-import math
+# builtin utility modules
+from typing import Hashable, Union, Optional
+from enum import Enum, auto, unique
 import warnings
+
+# builtin core modules
+import math
 import functools
 import os
 
-# Automatically install missing modules, least likely to be already installed first
+# auto install missing modules, least likely to be already installed first
 try:
     import sigfig                                                   # required for rounding values nicely
     from scipy.sparse import (csr_matrix, linalg as linsolver)      # used for faster solving
@@ -62,19 +66,21 @@ class ClassIter(type):
         return len(cls._ClassRegistry)
 
 
-class SolveMethod:
+@unique
+class SolveMethod(Enum):
 
     """
     A class to contain the different methods for solving the truss force balance equation
     Ax = B. Can see the different methods using get_constants(SolveMethod).
     """
 
-    NUMPY_STD = "numpy_std"
-    NUMPY_SOLVE = "numpy_solve"
-    SCIPY = "scipy"
+    NUMPY_STD = auto()
+    NUMPY_SOLVE = auto()
+    SCIPY = auto()
 
 
-class Unit:
+@unique
+class Unit(Enum):
 
     # units of force
     NEWTONS = "N"
@@ -104,8 +110,9 @@ class Truss(metaclass=ClassIter):
 
     _ClassRegistry = []
 
-    def __init__(self, name: str = "My First Truss", bar_params: dict = None,
-                 units: tuple[Unit] = (Unit.KILONEWTONS, Unit.MILLIMETRES), var_name: str = None):
+    def __init__(self, name: str = "My Truss", bar_params: Optional[dict] = None,
+                 units: tuple[Unit] = (Unit.KILONEWTONS, Unit.MILLIMETRES),
+                 var_name: Optional[str] = None):
 
         """
         Initialise a truss by setting the units system to be used
@@ -145,7 +152,8 @@ class Truss(metaclass=ClassIter):
 
         _ClassRegistry = []
 
-        def __init__(self, truss: object, name: str, x: float, y: float, var_name: str = None):
+        def __init__(self, truss: object, name: str, x: float, y: float,
+                     var_name: Optional[str] = None):
 
             self.name = name
             self.var_name = var_name
@@ -168,7 +176,7 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, truss: object, name: str, first_joint: object, second_joint: object,
-                     my_params: dict = None, var_name: str = None):
+                     my_params: Optional[dict] = None, var_name: Optional[str] = None):
 
             """
             Initialise a bar with a given name, which joints it should connect between, and
@@ -199,7 +207,7 @@ class Truss(metaclass=ClassIter):
             self.effective_area = (1.5 * self.b - self.D) * 0.9 * self.t
             self.buckling_ratio = self.length / self.b
 
-        def get_direction(self, origin_joint: object = None, as_degrees: bool = False):
+        def get_direction(self, origin_joint: Optional[object] = None, as_degrees: bool = False) -> float:
 
             """
             Calculates the (polar) angle this bar makes with the horizontal,
@@ -241,7 +249,7 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, name: str, joint: object, x_comp: float = 0.0, y_comp: float = 0.0,
-                     var_name: str = None):
+                     var_name: Optional[str] = None):
 
             """
             Initialise a load with a name, a joint to be applied at, and a force value in terms
@@ -272,13 +280,15 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, name: str, joint: object, support_type: str = 'pin',
-                     roller_normal: tuple = None, pin_rotation: float = 0, var_name: str = None):
+                     roller_normal: tuple = None, pin_rotation: float = 0,
+                     var_name: Optional[str] = None):
+
             """
             Initialise a support with a name, a joint object to convert to a support, the type of support
             and a direction if a roller joint is chosen.
 
             support_type:         can be 'pin' or 'roller' or 'encastre'
-            roller_normal: only relevant with roller joints, sets the direction of their reaction force
+            roller_normal:        only relevant with roller joints, sets the direction of their reaction force
             pin_rotation:         only relevant with pin joints, sets the direction which they are displayed
             """
 
@@ -312,9 +322,9 @@ class Truss(metaclass=ClassIter):
         Allows the results to be analysed and manipulated.
         """
 
-        def __init__(self, truss: object, sig_figs: int = None,
+        def __init__(self, truss: object, sig_figs: Optional[int] = None,
                      solution_method: SolveMethod = SolveMethod.NUMPY_SOLVE,
-                     delete_truss_after: bool = False):
+                     _delete_truss_after: bool = False):
 
             self.truss = truss
             self.results = truss.calculate(solution_method=solution_method)
@@ -337,7 +347,7 @@ class Truss(metaclass=ClassIter):
             self.round_data()
 
             # HACK: clear the truss registry to avoid issues if building another truss
-            if delete_truss_after:
+            if _delete_truss_after:
                 truss._delete_truss()
 
         def __repr__(self):
@@ -352,7 +362,7 @@ class Truss(metaclass=ClassIter):
                         f'{f"not rounded" if self.sig_figs is None else f"rounded to {self.sig_figs} s.f."}'
             return repr_str
 
-        def round_data(self):
+        def round_data(self) -> None:
             """
             Replaces the calculated data with rounded values, to precision given by Truss.Result.sig_figs.
             """
@@ -372,7 +382,7 @@ class Truss(metaclass=ClassIter):
                 except KeyError:
                     continue
 
-        def get_data(self, truss):
+        def get_data(self, truss: object) -> None:
             """
             Calculate tensions, stresses, strains, reaction forces and buckling ratios
             from the calculate() function.
@@ -410,7 +420,7 @@ class Truss(metaclass=ClassIter):
 
     # TRUSS METHODS
 
-    def calculate(self, solution_method=SolveMethod.SCIPY):
+    def calculate(self, solution_method: SolveMethod = SolveMethod.SCIPY) -> dict[str, Union[float, tuple]]:
 
         """
         The main part of the program. Calculates the forces in the truss's bars and supports
@@ -529,7 +539,7 @@ class Truss(metaclass=ClassIter):
         # Return the values in dict form
         return output_dict
 
-    def is_statically_determinate(self):
+    def is_statically_determinate(self) -> bool:
 
         """
         Does a simple arithmetic check to estimate if the truss
@@ -548,7 +558,7 @@ class Truss(metaclass=ClassIter):
 
         return self.b + self.F == 2 * self.j
 
-    def classify_error_in_truss(self, e: np.linalg.LinAlgError):
+    def classify_error_in_truss(self, e: np.linalg.LinAlgError) -> None:
 
         """
         If there was an exception raised when solving, attempt to find the cause and raise
@@ -570,7 +580,7 @@ class Truss(metaclass=ClassIter):
         else:
             raise TypeError("Something else went wrong. Requires attention.")
 
-    def dump_truss_to_json(self, filedir: str = None, filename: str = None):
+    def dump_truss_to_json(self, filedir: Optional[str] = None, filename: Optional[str] = None) -> None:
         """
         Writes the details of the truss, with the results if available, to
         a JSON file which can be read using `load_truss_from_json()`.
@@ -633,8 +643,8 @@ class Truss(metaclass=ClassIter):
         with open(out_file_dir, 'w') as f:
             json.dump(json_dict, f, indent=4)
 
-    def load_truss_from_json(self, file: str,
-                             show_if_results: bool = True, set_as_active_truss: bool = True):
+    def load_truss_from_json(self, file: str, show_if_results: bool = True,
+                             set_as_active_truss: bool = True) -> object:
         """
         TODO: Builds a truss from a JSON file provided by `dump_truss_to_json()`.
         If the results are available, they can be showed.
@@ -648,7 +658,7 @@ class Truss(metaclass=ClassIter):
             raise NotImplementedError(f'{json_dict} should be loaded and created')
 
     @classmethod
-    def _delete_truss(cls):
+    def _delete_truss(cls) -> None:
 
         """
         Delete the truss and clear the _ClassRegistry when the calculation for a truss
@@ -674,14 +684,14 @@ class Truss(metaclass=ClassIter):
         return self._ClassRegistry.index(self) == self._ClassRegistry.index(other)
 
     """
-    Returns all objects of a given type by their name or object reference.
+    Object/name getters
     """
 
     @staticmethod
-    def get_all_bars(str_names_only: bool = False):
+    def get_all_bars(str_names_only: bool = False) -> Union[list[Bar], set[str]]:
 
         """
-        Returns a list of bar objects or strings in this truss.
+        Returns a list of bar objects or set of string names in this truss.
         """
 
         if not str_names_only:
@@ -690,7 +700,7 @@ class Truss(metaclass=ClassIter):
             return {bar.name for bar in Truss.Bar}
 
     @staticmethod
-    def get_all_joints(str_names_only: bool = False):
+    def get_all_joints(str_names_only: bool = False) -> Union[list[Joint], set[str]]:
 
         """
         Returns a list of all joint objects or strings in this truss.
@@ -702,7 +712,7 @@ class Truss(metaclass=ClassIter):
             return {joint.name for joint in Truss.Joint}
 
     @staticmethod
-    def get_all_bars_connected_to_joint(joint: Joint, str_names_only: bool = False):
+    def get_all_bars_connected_to_joint(joint: Joint, str_names_only: bool = False) -> Union[list, set]:
 
         """
         Returns a list of bar objects or names which are connected to a given joint object.
@@ -716,7 +726,7 @@ class Truss(metaclass=ClassIter):
                 if joint.name in {bar.first_joint.name, bar.second_joint.name}}
 
     @staticmethod
-    def get_all_joints_connected_to_bar(bar: Bar, str_names_only: bool = False):
+    def get_all_joints_connected_to_bar(bar: Bar, str_names_only: bool = False) -> tuple[Union[Bar, str]]:
 
         """
         Returns a list of joint objects or names which are connected to a given bar object.
@@ -729,7 +739,7 @@ class Truss(metaclass=ClassIter):
             return (bar.first_joint.name, bar.second_joint.name)
 
     @staticmethod
-    def get_all_loads():
+    def get_all_loads() -> list[Load]:
 
         """
         Returns a list of load objects in the truss.
@@ -738,7 +748,7 @@ class Truss(metaclass=ClassIter):
         return list(Truss.Load)
 
     @staticmethod
-    def get_all_loads_at_joint(joint: Joint):
+    def get_all_loads_at_joint(joint: Joint) -> list[Load]:
 
         """
         Returns a list of load objects which are applied at a given joint object.
@@ -756,7 +766,7 @@ class Truss(metaclass=ClassIter):
         return list(filter(lambda load: load.joint.name is joint_name, Truss.Load))
 
     @staticmethod
-    def get_all_supports():
+    def get_all_supports() -> list[Support]:
 
         """
         Returns a list of support objects in the truss.
@@ -765,18 +775,19 @@ class Truss(metaclass=ClassIter):
         return list(Truss.Support)
 
     @staticmethod
-    def get_support_by_joint(joint: Joint):
+    def get_support_by_joint(joint: Joint) -> Optional[Support]:
 
         """
         Returns the support object placed at a given joint, or None if there is no support there.
         FIXME: if there are multiple supports, returns only the first one, which may be inconsistent.
         """
 
-        _supports = [support for support in Truss.Support if support.joint == joint]
+        _supports = list(filter(lambda s: s.joint is joint, Truss.Support))
+
         return _supports[0] if len(_supports) >= 1 else None
 
     @staticmethod
-    def get_bar_by_name(bar_name: str):
+    def get_bar_by_name(bar_name: str) -> Bar:
 
         """
         Returns the corresponding bar object given a bar name.
@@ -793,7 +804,7 @@ class Truss(metaclass=ClassIter):
 # TRUSS INNER CLASSES END HERE, MAIN RESULTS FUNCTIONS START HERE
 
 def plot_diagram(truss: Truss, results: Truss.Result,
-                 show_reactions: bool = False, delete_truss_after: bool = True):
+                 show_reactions: bool = True, _delete_truss_after: bool = True) -> None:
 
     """
     Create a matplotlib output image showing the truss geometry, annotated with arrows, labels and supports.
@@ -899,36 +910,43 @@ def plot_diagram(truss: Truss, results: Truss.Result,
     plt.show()
 
     # HACK: Clear the truss registry to avoid issues if building another truss
-    if delete_truss_after:
+    if _delete_truss_after:
         truss._delete_truss()
 
 
 # HELPER AND UTILITY FUNCTIONS
 
-def validate_var_name(var_name: str, allow_existing_vars=True):
+def validate_var_name(var_name: str, allow_existing_vars: bool = True, raise_error: bool = True) -> bool:
+
     """
     Checks if a var_name, which is used internally to instantiate the
     subclass objects (Joint, Bars, Load, Support) is as valid as if it
     were declared explicitly i.e. var_name = Class(...). They are set using
-    globals() where the key is var_name and the object reference is
-    the value.
+    globals() where the key is var_name and the object reference is the value.
     """
+
     import keyword
 
     if var_name in globals() and not allow_existing_vars:
-        raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already '
-                        f'in use, possibly because it is a builtin. \nIt cannot be used in the truss.')
+        if raise_error:
+            raise NameError(f'A global variable {var_name} (with the value {globals()[var_name]}) is already '
+                            f'in use, possibly because it is a builtin. \nIt cannot be used in the truss.')
+        else:
+            return False
 
     elif not var_name.isidentifier() or keyword.iskeyword(var_name) or var_name.startswith('__'):
-        raise NameError(f'{var_name} is not a valid variable name. \n'
+        if raise_error:
+            raise NameError(f'{var_name} is not a valid variable name. \n'
                         'It can only contain alphanumerics and underscores \n'
                         'and cannot start with double underscore (__).')
+        else:
+            return False
 
     else:
         return True
 
 
-def convert_to_valid_var_name(name: str, allow_existing_vars=True):
+def convert_to_valid_var_name(name: str, allow_existing_vars=True) -> str:
 
     """
     Given a user-defined name, converts it to a similar looking valid variable name.
@@ -960,7 +978,7 @@ def convert_to_valid_var_name(name: str, allow_existing_vars=True):
                           f'(attempt was {new_name}). Please change to a simpler name and try again.')
 
 
-def get_constants(cls: type):
+def get_constants(cls: type) -> dict[str, Hashable]:
 
     """
     Used to get a dict of constants {const_name: const_value}
@@ -978,7 +996,7 @@ def get_constants(cls: type):
     return dict(zip(names, vals))
 
 
-def set_active_truss(var_name: str):
+def set_active_truss(var_name: str) -> None:
 
     """
     Sets which truss is currently being built on.
@@ -989,7 +1007,7 @@ def set_active_truss(var_name: str):
     active_truss = globals()[var_name]
 
 
-def get_active_truss():
+def get_active_truss() -> Optional[Truss]:
 
     """
     Gets the truss which is currently being built on, or None if there is none.
@@ -999,7 +1017,7 @@ def get_active_truss():
     return active_truss if has_active_truss() else None
 
 
-def is_active_truss(var_name: str):
+def is_active_truss(var_name: str) -> bool:
 
     """
     Determines whether the given truss variable name is being built on.
@@ -1008,7 +1026,7 @@ def is_active_truss(var_name: str):
     return globals()[var_name] is active_truss
 
 
-def has_active_truss():
+def has_active_truss() -> bool:
 
     """
     Determines whether an active truss has been set yet, returning True or False.
@@ -1017,7 +1035,7 @@ def has_active_truss():
     return 'active_truss' in globals().keys()
 
 
-def set_matplotlib_fullscreen():
+def set_matplotlib_fullscreen() -> None:
 
     """
     Automatically set the matplotlib output to fullscreen.
@@ -1041,8 +1059,9 @@ def set_matplotlib_fullscreen():
         raise RuntimeWarning(f'The backend in use, {backend}, is not supported in fullscreen mode.')
 
 
-def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = None, truss: Truss = None,
-                                 show_reactions: bool = True, as_degrees: bool = False):
+def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = None,
+                                 truss: Optional[Truss] = None, show_reactions: bool = True,
+                                 as_degrees: bool = False) -> float:
 
     """
     Helper function to find a place to label text around a joint. Finds a location
@@ -1087,8 +1106,8 @@ def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = Non
     return math.degrees(most_free_angle) if as_degrees else most_free_angle
 
 
-def draw_support(x: float, y: float, size: float,
-                 support_type: str = 'pin', pin_rotation: float = 0, roller_normal: tuple = None):
+def draw_support(x: float, y: float, size: float, support_type: str = 'pin', pin_rotation: float = 0,
+                 roller_normal: tuple = None) -> None:
 
     """
     Draw a particular type of support, using the standard conventional symbols, on
@@ -1215,20 +1234,19 @@ def draw_support(x: float, y: float, size: float,
             plt.Circle((xtl[17], ytl[17]), size / 14, color='white', linewidth=1, zorder=1))
 
 
-# OBJECT BUILDING FUNCTIONS
+# OBJECT BUILDING FUNCTIONS: use from the module
 
 '''
 Allows trusses to be constructed with user-defined names instead of fixed variable names.
-Objects are still stored internally with names given by var_name
-but displayed to the user as joint_name, bar_name, load_name, support_name.
+Objects are still stored internally with names given by `var_name` but displayed to the user as
+`joint_name`, `bar_name`, `load_name`, `support_name`.
 
-This is done by directly accessing the globals() dictionary
-and adding {var_name : some_object_reference} to it.
+This is done by directly accessing the globals() dictionary and adding `{var_name : object}` to it.
 '''
 
 
 def init_truss(truss_name: str, bar_params: dict = None, units: str = 'kN, mm',
-               set_as_active_truss: bool = True, var_name: str = None, print_info: bool = False):
+               set_as_active_truss: bool = True, var_name: str = None, print_info: bool = False) -> None:
 
     """
     Initialise an empty truss with name `truss_name`, optionally set the default `bar_params`
@@ -1253,7 +1271,7 @@ def init_truss(truss_name: str, bar_params: dict = None, units: str = 'kN, mm',
 
 
 def create_joint(joint_name: str, x: float, y: float,
-                 truss: Truss = None, var_name: str = None, print_info: bool = False):
+                 truss: Optional[Truss] = None, var_name: str = None, print_info: bool = False) -> None:
 
     """
     Create an instance of a joint in a truss, with a user defined name joint_name,
@@ -1272,7 +1290,8 @@ def create_joint(joint_name: str, x: float, y: float,
 
 
 def create_bar(bar_name: str, first_joint_name: str, second_joint_name: str,
-               params: dict = None, truss: Truss = None, var_name: str = None, print_info: bool = False):
+               params: Optional[dict] = None, truss: Optional[Truss] = None,
+               var_name: str = None, print_info: bool = False) -> None:
 
     """
     Create an instance of a bar in a truss, with a user defined name bar_name,
@@ -1300,7 +1319,7 @@ def create_bar(bar_name: str, first_joint_name: str, second_joint_name: str,
 
 
 def create_load(load_name: str, joint_name: str, x: float, y: float,
-                truss: Truss = None, var_name: str = None, print_info: bool = False):
+                truss: Optional[Truss] = None, var_name: str = None, print_info: bool = False) -> None:
 
     """
     Create an instance of a load in a truss, with a user defined name load_name,
@@ -1325,7 +1344,7 @@ def create_load(load_name: str, joint_name: str, x: float, y: float,
 
 def create_support(support_name: str, joint_name: str, support_type: str,
                    roller_normal: tuple = None, pin_rotation: float = 0,
-                   truss: Truss = None, var_name: str = None, print_info: bool = False):
+                   truss: Optional[Truss] = None, var_name: str = None, print_info: bool = False) -> None:
 
     """
     Create an instance of a support in a truss, with a user defined name support_name,
@@ -1402,12 +1421,17 @@ if __name__ == "__main__":
     create_support('Support A', 'Joint A', support_type='encastre')
     create_support('Support E', 'Joint E', support_type='pin', pin_rotation=90)
 
-    try:  # Get the results of the truss calculation and display graphic
+    # Get the results of the truss calculation and display graphic
+    try:
         my_results = active_truss.Result(active_truss, sig_figs=3, solution_method=SolveMethod.NUMPY_STD)
         print(my_results)
-    except np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
+
+    except np.linalg.LinAlgError as e:
+        # The truss was badly made, so could not be solved
         active_truss.classify_error_in_truss(e)
 
+    # Save truss as a JSON file
     active_truss.dump_truss_to_json(filedir='./Saved Trusses')
 
+    # Show in a matplotlib window
     plot_diagram(active_truss, my_results, show_reactions=True)
