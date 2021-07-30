@@ -8,14 +8,6 @@ Soon I hope to make it more user-friendly and interactive.
 Assumes linear elasticity and small deflections: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
 
 
-## Video
-
-[<iframe width="560" height="315" src="https://www.youtube.com/embed/pQN-pnXPaVg" 
-title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; 
-clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
-</iframe>]
-
-
 ## To-do List and Future Aims
 
 ### Create a basic program - v0
