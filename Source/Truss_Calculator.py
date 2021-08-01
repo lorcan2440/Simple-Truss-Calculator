@@ -27,10 +27,10 @@ import os
 
 # auto install missing modules, least likely to be already installed first
 try:
-    import sigfig                                                   # required for rounding values nicely
-    from scipy.sparse import (csr_matrix, linalg as linsolver)      # used for faster solving
-    from matplotlib import pyplot as plt                            # used to display graphical output
-    import numpy as np                                              # used to do matrix operations
+    import sigfig                                                   # for rounding values nicely
+    from scipy.sparse import (csr_matrix, linalg as linsolver)      # for faster solving
+    from matplotlib import pyplot as plt                            # to display graphical output
+    import numpy as np                                              # to do matrix operations
 
 except ImportError:
     import subprocess
