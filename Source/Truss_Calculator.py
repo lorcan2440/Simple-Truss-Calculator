@@ -952,7 +952,9 @@ def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_
                     {bn: f['results']['stresses'][bn]
                         for bn in active_truss.get_all_bars(str_names_only=True)},
                     {bn: f['results']['strains'][bn]
-                        for bn in active_truss.get_all_bars(str_names_only=True)}))
+                        for bn in active_truss.get_all_bars(str_names_only=True)}
+                )
+            )
 
             print(truss_results)
             plot_diagram(active_truss, truss_results, show_reactions=True)
