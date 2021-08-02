@@ -74,6 +74,8 @@ Code is linted with `flake8`. Testing is done (currently) with the built-in `uni
 
 The idea for creating this program came from the Structural Design Course (SDC) long lab project in Part IA (1st year) of the Engineering course at the University of Cambridge. I originally wrote about 30 lines of code just to check some calculations of my own, then thought about making it work for any truss so I could improve it. After the lab ended I continued working on it in my spare time just for fun. Maybe someone else can get some use out of it too..?
 
+Disclaimer: if you build something using this and it all goes horribly wrong, don't sue me.
+
 
 ## Donations
 
