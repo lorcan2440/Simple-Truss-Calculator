@@ -324,18 +324,24 @@ class Truss(metaclass=ClassIter):
 
         def __init__(self, truss: object, sig_figs: Optional[int] = None,
                      solution_method: SolveMethod = SolveMethod.NUMPY_SOLVE,
-                     _delete_truss_after: bool = False):
+                     _delete_truss_after: bool = False, _override_res: Optional[tuple[dict]] = None):
 
             self.truss = truss
-            self.results = truss.calculate(solution_method=solution_method)
-            self.tensions, self.reactions, self.stresses, self.strains = {}, {}, {}, {}
-            self.buckling_ratios = {}
             self.sig_figs = sig_figs
 
             warnings.filterwarnings('ignore')
 
-            # populate the tensions, reactions, etc. dictionaries from the results
-            self.get_data(truss)
+            if _override_res is None:
+                self.results = truss.calculate(solution_method=solution_method)
+                self.tensions, self.reactions, self.stresses, self.strains = {}, {}, {}, {}
+                self.buckling_ratios = {}
+
+                # populate the tensions, reactions, etc. dictionaries from the results
+                self.get_data(truss)
+
+            else:
+                self.tensions, self.reactions, self.stresses, self.strains, self.buckling_ratios = \
+                    (*_override_res,)
 
             # set the truss's results before rounding but after zeroing small numbers
             self.truss.results = {'internal_forces': self.tensions.copy(),
@@ -428,9 +434,6 @@ class Truss(metaclass=ClassIter):
         `{bar_name: axial_force_value} + {support_name: (reaction_force_value_x, reaction_force_value_y)}`
         """
 
-        # Get a list of the distinct joint names, number of equations to form = 2 * number of joints
-        joint_names = self.get_all_joints(str_names_only=True)
-
         # List of dictionaries for unknowns, given default zero values
         wanted_vars = []
         for bar in self.get_all_bars():
@@ -474,7 +477,7 @@ class Truss(metaclass=ClassIter):
         # Populate the coefficients and constants matrices (initially lists of lists)
         # in preparation to solve the matrix equation M * x = B
         coefficients, constants = [], []
-        for joint_name in joint_names:
+        for joint_name in self.get_all_joints(str_names_only=True):
 
             # get the coefficients (matrix M), representing the unknown internal/reaction forces
             current_line = [round(math.cos(all_directions[joint_name].get(var, math.pi / 2)), 10)
@@ -581,6 +584,7 @@ class Truss(metaclass=ClassIter):
             raise TypeError("Something else went wrong. Requires attention.")
 
     def dump_truss_to_json(self, filedir: Optional[str] = None, filename: Optional[str] = None) -> None:
+
         """
         Writes the details of the truss, with the results if available, to
         a JSON file which can be read using `load_truss_from_json()`.
@@ -635,27 +639,14 @@ class Truss(metaclass=ClassIter):
                 'internal_forces': self.results.get('internal_forces'),
                 'reaction_forces': self.results.get('reaction_forces'),
                 'stresses': self.results.get('stresses'),
-                'strains': self.results.get('strains')
+                'strains': self.results.get('strains'),
+                'buckling_ratios': self.results.get('buckling_ratios')
             },
         }
 
         # write to the chosen JSON file location
         with open(out_file_dir, 'w') as f:
             json.dump(json_dict, f, indent=4)
-
-    def load_truss_from_json(self, file: str, show_if_results: bool = True,
-                             set_as_active_truss: bool = True) -> object:
-        """
-        TODO: Builds a truss from a JSON file provided by `dump_truss_to_json()`.
-        If the results are available, they can be showed.
-        """
-
-        import json
-
-        with open(file) as f:
-            json_dict = json.load(f)
-
-            raise NotImplementedError(f'{json_dict} should be loaded and created')
 
     @classmethod
     def _delete_truss(cls) -> None:
@@ -757,7 +748,7 @@ class Truss(metaclass=ClassIter):
         return list(filter(lambda load: load.joint is joint, Truss.Load))
 
     @staticmethod
-    def get_all_loads_at_joint_by_name(joint_name: str):
+    def get_all_loads_at_joint_by_name(joint_name: str) -> list[Load]:
 
         """
         Returns a list of load objects which are applied at a given joint name.
@@ -766,13 +757,16 @@ class Truss(metaclass=ClassIter):
         return list(filter(lambda load: load.joint.name is joint_name, Truss.Load))
 
     @staticmethod
-    def get_all_supports() -> list[Support]:
+    def get_all_supports(str_names_only: bool = False) -> Union[list[Support], set[str]]:
 
         """
         Returns a list of support objects in the truss.
         """
 
-        return list(Truss.Support)
+        if not str_names_only:
+            return list(Truss.Support)
+        else:
+            return {s.name for s in Truss.Support}
 
     @staticmethod
     def get_support_by_joint(joint: Joint) -> Optional[Support]:
@@ -887,7 +881,7 @@ def plot_diagram(truss: Truss, results: Truss.Result,
                  va='center', ha='left' if -90 < math.degrees(label_angle) <= 90 else 'right')
 
     # Graphical improvements
-    AXES_COLOUR = '#BBBBBB'
+    AXES_COLOUR = '#BBBBBB'  # light grey
 
     plt.title(truss.name)
     plt.legend(loc='upper right')
@@ -896,14 +890,15 @@ def plot_diagram(truss: Truss, results: Truss.Result,
     plt.xlabel(f'$x$-position / {truss.units.split(",")[1]}')
     plt.ylabel(f'$y$-position / {truss.units.split(",")[1]}')
 
-    ax, spines = plt.gca(), plt.gca().spines
-    spines['right'].set_visible(False)
+    ax = plt.gca()
+    spines = ax.spines
+    spines['right'].set_visible(False)  # make upper-right spines disappear
     spines['top'].set_visible(False)
-    spines['left'].set_color(AXES_COLOUR)
+    spines['left'].set_color(AXES_COLOUR)  # axis lines
     spines['bottom'].set_color(AXES_COLOUR)
-    ax.tick_params(axis='x', colors=AXES_COLOUR)
-    ax.tick_params(axis='y', colors=AXES_COLOUR)
-    ax.xaxis.label.set_color(AXES_COLOUR)
+    ax.tick_params(axis='x', colors=AXES_COLOUR, grid_alpha=0.5)  # axis ticks and their number labels
+    ax.tick_params(axis='y', colors=AXES_COLOUR, grid_alpha=0.5)
+    ax.xaxis.label.set_color(AXES_COLOUR)  # axis name labels
     ax.yaxis.label.set_color(AXES_COLOUR)
 
     set_matplotlib_fullscreen()
@@ -912,6 +907,57 @@ def plot_diagram(truss: Truss, results: Truss.Result,
     # HACK: Clear the truss registry to avoid issues if building another truss
     if _delete_truss_after:
         truss._delete_truss()
+
+
+def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_truss: bool = True) -> object:
+    """
+    Builds a truss from a JSON file provided by `dump_truss_to_json()`.
+    If the results are available, they can be showed.
+    """
+
+    import json
+
+    with open(file) as _:
+
+        f = json.load(_)
+
+        truss_attr = f['truss']
+        init_truss(truss_attr.get('name'), truss_attr.get('default_bar_params'), truss_attr.get('units'),
+                   set_as_active_truss, truss_attr.get('var_name'))
+
+        for joint_attr in f['joints']:
+            create_joint(joint_attr.get('name'), joint_attr.get('x'), joint_attr.get('y'), active_truss)
+
+        for bar_attr in f['bars']:
+            create_bar(bar_attr.get('name'), *bar_attr.get('connected_joint_names'),
+                       bar_attr.get('bar_params'), active_truss, bar_attr.get('var_name'))
+
+        for load_attr in f['loads']:
+            create_load(load_attr.get('name'), load_attr.get('joint_name'), load_attr.get('x'),
+                        load_attr.get('y'), active_truss, load_attr.get('var_name'))
+
+        for supp_attr in f['supports']:
+            create_support(supp_attr['name'], supp_attr['joint_name'], supp_attr['support_type'],
+                           supp_attr['roller_normal'], supp_attr['pin_rotation'], active_truss,
+                           supp_attr['var_name'])
+
+        if show_if_results and f.get('results').get('internal_forces') is not None:
+
+            truss_results = active_truss.Result(active_truss, sig_figs=3, solution_method=None,
+                _override_res=(
+                    {bn: f['results']['internal_forces'][bn]
+                        for bn in active_truss.get_all_bars(str_names_only=True)},
+                    {sn: f['results']['reaction_forces'][sn]
+                        for sn in active_truss.get_all_supports(str_names_only=True)},
+                    {bn: f['results']['stresses'][bn]
+                        for bn in active_truss.get_all_bars(str_names_only=True)},
+                    {bn: f['results']['strains'][bn]
+                        for bn in active_truss.get_all_bars(str_names_only=True)}))
+
+            print(truss_results)
+            plot_diagram(active_truss, truss_results, show_reactions=True)
+
+        return get_active_truss() if set_as_active_truss else None
 
 
 # HELPER AND UTILITY FUNCTIONS

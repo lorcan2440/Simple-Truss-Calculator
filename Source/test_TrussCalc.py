@@ -15,8 +15,6 @@ class TrussTests(unittest.TestCase):
 
     TODO:   if a reaction force is zero, do not show its arrow even if `show_reactions` is `True`.
 
-    TODO:   add JSON loading of trusses
-
     TODO:   implement constants for entering unit systems.
     """
 
