@@ -280,7 +280,7 @@ class Truss(metaclass=ClassIter):
         _ClassRegistry = []
 
         def __init__(self, name: str, joint: object, support_type: str = 'pin',
-                     roller_normal: tuple = None, pin_rotation: float = 0,
+                     roller_normal: np.array = None, pin_rotation: float = 0,
                      var_name: Optional[str] = None):
 
             """
@@ -393,8 +393,6 @@ class Truss(metaclass=ClassIter):
             Calculate tensions, stresses, strains, reaction forces and buckling ratios
             from the calculate() function.
             """
-
-            import sys
 
             # any forces smaller than `SMALL_NUM` will be set to zero (assumed to be due to rounding
             # errors in the solver function). NOTE: maybe move this functionality into `round_data()`.
@@ -634,7 +632,8 @@ class Truss(metaclass=ClassIter):
             ],
             'supports': [
                 {'name': s.name, 'var_name': s.var_name, 'joint_name': s.joint.name,
-                 'support_type': s.support_type, 'roller_normal': s.roller_normal,
+                 'support_type': s.support_type,
+                 'roller_normal': tuple(s.roller_normal) if s.roller_normal is not None else None,
                  'pin_rotation': s.pin_rotation} for s in self.get_all_supports()
             ],
             'results': {
@@ -954,6 +953,8 @@ def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_
                     {bn: f['results']['stresses'][bn]
                         for bn in active_truss.get_all_bars(str_names_only=True)},
                     {bn: f['results']['strains'][bn]
+                        for bn in active_truss.get_all_bars(str_names_only=True)},
+                    {bn: f['results']['buckling_ratios'][bn]
                         for bn in active_truss.get_all_bars(str_names_only=True)}
                 )
             )
@@ -1157,7 +1158,7 @@ def find_free_space_around_joint(joint: Truss.Joint, results: Truss.Result = Non
 
 
 def draw_support(x: float, y: float, size: float, support_type: str = 'pin', pin_rotation: float = 0,
-                 roller_normal: tuple = None) -> None:
+                 roller_normal: np.array = None) -> None:
 
     """
     Draw a particular type of support, using the standard conventional symbols, on
@@ -1393,7 +1394,7 @@ def create_load(load_name: str, joint_name: str, x: float, y: float,
 
 
 def create_support(support_name: str, joint_name: str, support_type: str,
-                   roller_normal: tuple = None, pin_rotation: float = 0,
+                   roller_normal: np.array = None, pin_rotation: float = 0,
                    truss: Optional[Truss] = None, var_name: str = None, print_info: bool = False) -> None:
 
     """

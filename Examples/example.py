@@ -3,13 +3,14 @@ import _import_helper  # noqa
 from Source import Truss_Calculator as tc
 
 '''
-It is reccommended to use the factory functions to build trusses (Example 1).
-However it is also possible to directly create the objects using classes (Example 2).
+It is recommended to use the factory functions to build trusses (Example 1).
+However, it is also possible to directly create the objects using classes (Example 2).
 '''
 
-#############################################################
-###  Example 1: Building a truss using factory functions  ###
-#############################################################
+
+#########################################################
+#  Example 1: Building a truss using factory functions  #
+#########################################################
 
 # set some initial parameters
 default_bar_params = {"b": 16, "t": 1.1, "D": 5, "E": 210, "strength_max": 0.216}
@@ -50,16 +51,24 @@ my_results = tc.active_truss.Result(tc.active_truss, sig_figs=3, solution_method
 # show the results in text form
 print(my_results)
 
-# show the results in graphical form
-tc.plot_diagram(tc.active_truss, my_results, show_reactions=True)
+# get e.g. force and stress in a specific bar
+print(tc.active_truss.results['internal_forces']['AD'])  # unrounded
+print(tc.active_truss.results['stresses']['AD'])
+print(my_results.tensions['AD'])  # rounded
+print(my_results.stresses['AD'])
+
+# show the results in graphical form. If we may want to use this truss again (e.g. in Example 3)
+# then we must set _delete_truss_after = False.
+tc.plot_diagram(tc.active_truss, my_results, show_reactions=True, _delete_truss_after=False)
 
 
-###################################################
-###  Example 2: Building a truss using objects  ###
-###################################################
+###############################################
+#  Example 2: Building a truss using objects  #
+###############################################
 
-# initialise a truss (and set it as the active truss)
-my_truss = tc.Truss('My Second Truss', default_bar_params, units_system)
+# initialise a truss (and set it as the active truss).
+# NOTE: if the var_name argument is omitted, there can be issues with saving/loading.
+my_truss = tc.Truss('My Second Truss', default_bar_params, units_system, var_name='my_truss')
 
 # create the joints: truss object, name, x, y
 joint_a = my_truss.Joint(my_truss, 'A', 0, 0)
@@ -93,5 +102,20 @@ my_results = my_truss.Result(my_truss, sig_figs=3, solution_method=tc.SolveMetho
 # show the results in text form
 print(my_results)
 
-# show the results in graphical form
-tc.plot_diagram(my_truss, my_results, show_reactions=True)
+# show the results in graphical form. If we may want to use this truss again (e.g. in Example 3)
+# then we must set _delete_truss_after = False.
+tc.plot_diagram(my_truss, my_results, show_reactions=True, _delete_truss_after=False)
+
+
+###################################
+#  Example 3: Saving and loading  #
+###################################
+
+# NOTE: saving and loading does not work on trusses created using objects,
+# unless a var_name is specified when initialising the truss.
+
+tc.active_truss.dump_truss_to_json('./Saved Trusses')
+my_truss.dump_truss_to_json('./Saved Trusses')
+
+tc.load_truss_from_json('./Saved Trusses/my_first_truss.json')  # load truss from Example 1
+tc.load_truss_from_json('./Saved Trusses/my_truss.json')  # load truss from Example 2
