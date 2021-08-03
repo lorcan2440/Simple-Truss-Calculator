@@ -394,9 +394,11 @@ class Truss(metaclass=ClassIter):
             from the calculate() function.
             """
 
+            import sys
+
             # any forces smaller than `SMALL_NUM` will be set to zero (assumed to be due to rounding
             # errors in the solver function). NOTE: maybe move this functionality into `round_data()`.
-            SMALL_NUM = 1e-10
+            SMALL_NUM = 1e-9
 
             for item in self.results:
 
