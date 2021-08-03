@@ -1,3 +1,4 @@
 .pytest_cache
 .git
-*__pycache__/
+Source/__pycache__/
+Examples/__pycache__/
