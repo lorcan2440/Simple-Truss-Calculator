@@ -1,3 +1,8 @@
 .pytest_cache
 .git
+.spec
+
+Build/build/
+Build/dist/
+
 **/__pycache__/
