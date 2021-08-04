@@ -41,6 +41,7 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
   * [ ] Make the joints draggable
   * [ ] Make the loads/supports rotatable
   * [ ] Improve the speed of the calculator program if necessary (want 60 fps animations)
+  * [ ] Build as a standalone executable and release.
   
   
 ### Extend the calculations further (no FEA)
