@@ -21,7 +21,7 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
   * [x] Add unit testing with `unittest`
  
  
-### Make the program more generalised - v1
+### Make the program more generalised
 
   Goal: to make it easier to work in a more modular form.
   
@@ -33,7 +33,7 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
   * [ ] Add CI/CD, switch unit testing framework to `pytest` and publish as a Python package
 
 
-### Convert to a PyQt5 application - v2
+### Convert to a PyQt5 application - v1
 
   Goal: to make a simple editable truss calculator.
 
@@ -41,7 +41,7 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
   * [ ] Make the joints draggable
   * [ ] Make the loads/supports rotatable
   * [ ] Improve the speed of the calculator program if necessary (want 60 fps animations)
-  * [ ] Build as a standalone executable with `pyinstaller` and release.
+  * [ ] Build as a standalone executable with `pyinstaller` and release
   
   
 ### Extend the calculations further (no FEA)
@@ -58,7 +58,7 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
   Goal: to give all the functionality of the code using buttons and text fields.
   
   * [ ] Add property manager menus for each object when clicked on
-  * [ ] Allow the option of either 2D or 3D trusses, using `mpl_toolkits.mplot3d` for 3D display.
+  * [ ] Allow the option of either 2D or 3D trusses, using `mpl_toolkits.mplot3d` for 3D display
 
 
 ### Implement truss optimisation
