@@ -3,7 +3,7 @@
 """
 Simple Truss Calculator
 
-Version:    1.3
+Version:    1.5
 Source:     https://github.com/lorcan2440/Simple-Truss-Calculator
 By:         Lorcan Nicholls
 Contact:    lnick2440@gmail.com
@@ -642,7 +642,7 @@ class Truss(metaclass=ClassIter):
                 'stresses': self.results.get('stresses'),
                 'strains': self.results.get('strains'),
                 'buckling_ratios': self.results.get('buckling_ratios')
-            },
+            } if self.results is not None else None,
         }
 
         # write to the chosen JSON file location
@@ -910,7 +910,9 @@ def plot_diagram(truss: Truss, results: Truss.Result,
         truss._delete_truss()
 
 
-def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_truss: bool = True) -> object:
+def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_truss: bool = True,
+                         _delete_truss_after: Optional[bool] = False) -> object:
+
     """
     Builds a truss from a JSON file provided by `dump_truss_to_json()`.
     If the results are available, they can be showed.
@@ -918,9 +920,12 @@ def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_
 
     import json
 
-    with open(file) as _:
+    with open(file) as json_file:
 
-        f = json.load(_)
+        f = json.load(json_file)
+
+        bar_names = active_truss.get_all_bars(str_names_only=True)
+        support_names = active_truss.get_all_supports(str_names_only=True)
 
         truss_attr = f['truss']
         init_truss(truss_attr.get('name'), truss_attr.get('default_bar_params'), truss_attr.get('units'),
@@ -942,25 +947,21 @@ def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_
                            supp_attr['roller_normal'], supp_attr['pin_rotation'], active_truss,
                            supp_attr['var_name'])
 
-        if show_if_results and f.get('results').get('internal_forces') is not None:
+        if show_if_results and (res := f['results']) is not None:
 
             truss_results = active_truss.Result(active_truss, sig_figs=3, solution_method=None,
                 _override_res=(
-                    {bn: f['results']['internal_forces'][bn]
-                        for bn in active_truss.get_all_bars(str_names_only=True)},
-                    {sn: f['results']['reaction_forces'][sn]
-                        for sn in active_truss.get_all_supports(str_names_only=True)},
-                    {bn: f['results']['stresses'][bn]
-                        for bn in active_truss.get_all_bars(str_names_only=True)},
-                    {bn: f['results']['strains'][bn]
-                        for bn in active_truss.get_all_bars(str_names_only=True)},
-                    {bn: f['results']['buckling_ratios'][bn]
-                        for bn in active_truss.get_all_bars(str_names_only=True)}
+                    {bn: res['internal_forces'][bn] for bn in bar_names},
+                    {sn: res['reaction_forces'][sn] for sn in support_names},
+                    {bn: res['stresses'][bn] for bn in bar_names},
+                    {bn: res['strains'][bn] for bn in bar_names},
+                    {bn: res['buckling_ratios'][bn] for bn in bar_names}
                 )
             )
 
             print(truss_results)
-            plot_diagram(active_truss, truss_results, show_reactions=True)
+            plot_diagram(active_truss, truss_results, show_reactions=True,
+                         _delete_truss_after=_delete_truss_after)
 
         return get_active_truss() if set_as_active_truss else None
 
