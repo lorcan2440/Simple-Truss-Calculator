@@ -87,7 +87,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def __test_multiple_loads(self):
+    def test_multiple_loads(self):
 
         """
         Case 2: A truss with multiple loads on different joints.
@@ -104,7 +104,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def __test_with_angled_roller(self):
+    def test_with_angled_roller(self):
 
         """
         Case 3: A truss with a roller support at an inclined angle.
@@ -123,7 +123,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def __test_unloaded_truss(self):
+    def test_unloaded_truss(self):
 
         """
         Case 4: A truss without any applied external loads.
@@ -142,7 +142,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def __test_multiple_loads_on_same_joint(self):
+    def test_multiple_loads_on_same_joint(self):
 
         """
         Case 5: A truss with mutliple loads on the same joint which do not cancel out.
@@ -161,7 +161,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def __test_with_fully_cancelling_loads(self):
+    def test_with_fully_cancelling_loads(self):
 
         """
         Case 6: A truss with multiple loads on the same joint which do cancel out
