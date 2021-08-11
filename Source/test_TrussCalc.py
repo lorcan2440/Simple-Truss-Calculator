@@ -28,7 +28,7 @@ class TrussTests(unittest.TestCase):
     def test_SDC_truss(self):
 
         """
-        Case 1: standard well-built truss. Uses the module factory functions.
+        Case 1a: standard well-built truss. Uses the module factory functions.
         Represents the truss built in the SDC project.
         """
 
@@ -62,11 +62,32 @@ class TrussTests(unittest.TestCase):
         except tc.np.linalg.LinAlgError as e:  # The truss was badly made, so could not be solved
             tc.active_truss.classify_error_in_truss(e)
 
-        tc.active_truss.dump_truss_to_json(filedir='./Saved Trusses')
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
 
         tc.plot_diagram(tc.active_truss, my_results, show_reactions=True)
 
-    def test_multiple_loads(self):
+    def test_bridge_structure(self):
+
+        """
+        Case 1b: A truss bridge.
+        """
+
+        joints = ((0, 0), (100, 0), (200, 0), (300, 0), (400, 0), (100, 100), (200, 100), (300, 100))
+        bars = (('AB', strong), ('BC', strong), ('CD', strong), ('DE', strong), ('AF', strong),
+                ('BF', strong), ('CF', strong), ('CG', strong), ('CH', strong), ('DH', strong),
+                ('EH', strong), ('FG', strong), ('GH', strong))
+        loads = [('A', 0, -100), ('B', 0, -200), ('C', 0, -200), ('D', 0, -200), ('E', 0, -100)]
+        supports = (('A', {'support_type': 'pin'}), ('E', {'support_type': 'roller', 'roller_normal': (0, 1)}))
+
+        tc.init_truss('Bridge')
+        results = build_from_lists(joints, bars, loads, supports,
+                                   sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
+
+        tc.plot_diagram(tc.active_truss, results, show_reactions=True)
+
+    def __test_multiple_loads(self):
 
         """
         Case 2: A truss with multiple loads on different joints.
@@ -83,7 +104,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def test_with_angled_roller(self):
+    def __test_with_angled_roller(self):
 
         """
         Case 3: A truss with a roller support at an inclined angle.
@@ -102,7 +123,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def test_unloaded_truss(self):
+    def __test_unloaded_truss(self):
 
         """
         Case 4: A truss without any applied external loads.
@@ -121,7 +142,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def test_multiple_loads_on_same_joint(self):
+    def __test_multiple_loads_on_same_joint(self):
 
         """
         Case 5: A truss with mutliple loads on the same joint which do not cancel out.
@@ -140,7 +161,7 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def test_with_fully_cancelling_loads(self):
+    def __test_with_fully_cancelling_loads(self):
 
         """
         Case 6: A truss with multiple loads on the same joint which do cancel out

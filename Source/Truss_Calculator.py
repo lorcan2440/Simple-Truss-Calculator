@@ -395,8 +395,15 @@ class Truss(metaclass=ClassIter):
             """
 
             # any forces smaller than `SMALL_NUM` will be set to zero (assumed to be due to rounding
-            # errors in the solver function). NOTE: maybe move this functionality into `round_data()`.
-            SMALL_NUM = 1e-9
+            # errors in the solver function). Currently set to 10 times smaller than the least
+            # significant digit of the smallest internal force value.
+            # NOTE: maybe move this functionality into `round_data()`.
+            # SMALL_NUM = 1e-8
+            SMALL_NUM = 0.1 * 10 ** (-1 * self.sig_figs) * min(
+                [abs(f) for f in self.results.values()
+                 if type(f) is not tuple and f > (0.1 * 10 ** (-1 * self.sig_figs))])
+
+            print(SMALL_NUM)
 
             for item in self.results:
 
@@ -875,7 +882,7 @@ def plot_diagram(truss: Truss, results: Truss.Result,
                   head_width=LEN / 5, head_length=LEN / 4)
 
         # TODO: if there is another load at this `load.joint`, label it at the arrow midpoint + normal a bit
-        label_angle = find_free_space_around_joint(load.joint)
+        label_angle = find_free_space_around_joint(load.joint, results=results)
         plt.text(load.joint.x + LEN / 3 * math.cos(label_angle),
                  load.joint.y + LEN / 3 * math.sin(label_angle),
                  f'{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units.split(",")[0]}',
@@ -924,9 +931,6 @@ def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_
 
         f = json.load(json_file)
 
-        bar_names = active_truss.get_all_bars(str_names_only=True)
-        support_names = active_truss.get_all_supports(str_names_only=True)
-
         truss_attr = f['truss']
         init_truss(truss_attr.get('name'), truss_attr.get('default_bar_params'), truss_attr.get('units'),
                    set_as_active_truss, truss_attr.get('var_name'))
@@ -948,6 +952,9 @@ def load_truss_from_json(file: str, show_if_results: bool = True, set_as_active_
                            supp_attr['var_name'])
 
         if show_if_results and (res := f['results']) is not None:
+
+            bar_names = active_truss.get_all_bars(str_names_only=True)
+            support_names = active_truss.get_all_supports(str_names_only=True)
 
             truss_results = active_truss.Result(active_truss, sig_figs=3, solution_method=None,
                 _override_res=(
@@ -1434,6 +1441,10 @@ if os.path.basename(__file__).endswith('.exe'):
     warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
                             category=UserWarning)  # deprecation warning inherits from UserWarning
 
+'''
+load_truss_from_json('./Saved Trusses/bridge.json')
+'''
+
 if __name__ == "__main__":
 
     # -- An example truss - cantilever used in SDC --
@@ -1483,7 +1494,7 @@ if __name__ == "__main__":
         active_truss.classify_error_in_truss(e)
 
     # Save truss as a JSON file
-    active_truss.dump_truss_to_json(filedir='./Saved Trusses')
+    active_truss.dump_truss_to_json(filedir='../Saved Trusses')
 
     # Show in a matplotlib window
     plot_diagram(active_truss, my_results, show_reactions=True)
