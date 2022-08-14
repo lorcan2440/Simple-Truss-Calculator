@@ -4,5 +4,6 @@
 
 Build/build/
 Build/dist/
+_extensions/
 
 **/__pycache__/

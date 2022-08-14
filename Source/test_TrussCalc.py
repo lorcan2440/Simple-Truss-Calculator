@@ -87,7 +87,36 @@ class TrussTests(unittest.TestCase):
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def test_multiple_loads(self):
+    def test_hex_truss(self):
+
+        """
+        Case 1c: A hexagonal vertically loaded truss.
+        """
+
+        import math
+
+        SQRT_3_OVER_2 = math.sqrt(3) / 2
+
+        joints = ((0, 1), (SQRT_3_OVER_2, 1/2), (SQRT_3_OVER_2, -1/2),
+                  (0, -1), (-SQRT_3_OVER_2, -1/2), (-SQRT_3_OVER_2, 1/2))
+
+        bars = (('AB', strong), ('BC', strong), ('CD', strong), ('DE', strong), ('EF', strong), ('FA', strong),
+            ('BE', strong), ('CF', strong))
+
+        loads = [('A', 0, -1)]
+
+        supports = [('A', {'support_type': 'pin'}),
+                    ('D', {'support_type': 'pin'})]
+
+        tc.init_truss('Hexagonal Spring')
+        results = build_from_lists(joints, bars, loads, supports,
+                                   sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
+
+        tc.plot_diagram(tc.active_truss, results, show_reactions=True)
+
+    def __test_multiple_loads(self):
 
         """
         Case 2: A truss with multiple loads on different joints.
@@ -102,9 +131,11 @@ class TrussTests(unittest.TestCase):
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
+
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
-    def test_with_angled_roller(self):
+    def __test_with_angled_roller(self):
 
         """
         Case 3: A truss with a roller support at an inclined angle.
@@ -120,6 +151,8 @@ class TrussTests(unittest.TestCase):
         tc.init_truss('Angled roller support')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
@@ -140,6 +173,8 @@ class TrussTests(unittest.TestCase):
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
+
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
     def test_multiple_loads_on_same_joint(self):
@@ -159,12 +194,14 @@ class TrussTests(unittest.TestCase):
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
 
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
+
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 
     def test_with_fully_cancelling_loads(self):
 
         """
-        Case 6: A truss with multiple loads on the same joint which do cancel out
+        Case 6: A truss with multiple loads on the same joint which cancel out
         giving an effectively unloaded truss.
         """
 
@@ -178,6 +215,8 @@ class TrussTests(unittest.TestCase):
         tc.init_truss('All external loads cancel out')
         results = build_from_lists(joints, bars, loads, supports,
                                    sig_figs=3, solution_method=tc.SolveMethod.NUMPY_STD)
+
+        tc.active_truss.dump_truss_to_json(filedir='../Saved Trusses')
 
         tc.plot_diagram(tc.active_truss, results, show_reactions=True)
 

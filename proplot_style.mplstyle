@@ -1,0 +1,87 @@
+### Use this stylesheet with:
+# from matplotlib import pyplot as plt
+# plt.style.use('path/to/this/sheet.mplstyle')
+### Customise specific parameters with:
+# import matplotlib as mpl
+# mpl.rcParams['key_here'] = 'value_here'
+
+# Matplotlib settings
+axes.axisbelow:              line
+axes.formatter.use_mathtext: False
+axes.grid:                   True
+axes.grid.which:             major
+axes.edgecolor:              black
+axes.facecolor:              ffffff
+axes.labelcolor:             black
+axes.labelpad:               4.0
+axes.labelsize:              medium
+axes.labelweight:            normal
+axes.linewidth:              0.6
+axes.titlecolor:             black
+axes.titlepad:               5.0
+axes.titlesize:              medium
+axes.titleweight:            normal
+axes.xmargin:                0.05
+axes.ymargin:                0.05
+errorbar.capsize:            3.0
+figure.autolayout:           False
+figure.figsize:              4, 4
+figure.dpi:                  100
+figure.facecolor:            white
+figure.titlesize:            large
+figure.titleweight:          bold
+font.serif:                  TeX Gyre Schola, TeX Gyre Bonum, TeX Gyre Termes, TeX Gyre Pagella, DejaVu Serif, Bitstream Vera Serif, Computer Modern Roman, Bookman, Century Schoolbook L, Charter, ITC Bookman, New Century Schoolbook, Nimbus Roman No9 L, Palatino, Times New Roman, Times, Utopia, serif
+font.sans-serif:             TeX Gyre Heros, DejaVu Sans, Bitstream Vera Sans, Computer Modern Sans Serif, Arial, Avenir, Fira Math, Frutiger, Geneva, Gill Sans, Helvetica, Lucid, Lucida Grande, Myriad Pro, Noto Sans, Roboto, Source Sans Pro, Tahoma, Trebuchet MS, Ubuntu, Univers, Verdana, sans-serif
+font.monospace:              TeX Gyre Cursor, DejaVu Sans Mono, Bitstream Vera Sans Mono, Computer Modern Typewriter, Andale Mono, Courier New, Courier, Fixed, Nimbus Mono L, Terminal, monospace
+font.cursive:                TeX Gyre Chorus, Apple Chancery, Felipa, Sand, Script MT, Textile, Zapf Chancery, cursive
+font.fantasy:                TeX Gyre Adventor, Avant Garde, Charcoal, Chicago, Comic Sans MS, Futura, Humor Sans, Impact, Optima, Western, xkcd, fantasy
+font.family:                 sans-serif
+font.size:                   9.0
+grid.alpha:                  0.11
+grid.color:                  black
+grid.linestyle:              -
+grid.linewidth:              0.6
+hatch.color:                 black
+hatch.linewidth:             0.6
+image.cmap:                  Accent
+lines.linestyle:             -
+lines.linewidth:             1.5
+lines.markersize:            6.0
+legend.borderaxespad:        0
+legend.borderpad:            0.5
+legend.columnspacing:        1.5
+legend.edgecolor:            black
+legend.facecolor:            white
+legend.fancybox:             True
+legend.fontsize:             medium
+legend.framealpha:           0.8
+legend.handletextpad:        0.5
+mathtext.fontset:            custom
+mathtext.default:            regular
+patch.linewidth:             0.6
+savefig.bbox:                tight
+savefig.dpi:                 1000
+savefig.facecolor:           white
+savefig.format:              pdf
+savefig.transparent:         False
+text.color:                  black
+xtick.color:                 black
+xtick.direction:             out
+xtick.labelsize:             medium
+xtick.major.pad:             2.0
+xtick.major.size:            4.0
+xtick.major.width:           0.6
+xtick.minor.pad:             2.0
+xtick.minor.size:            2.0
+xtick.minor.width:           0.48
+xtick.minor.visible:         True
+ytick.color:                 black
+ytick.direction:             out
+ytick.labelsize:             medium
+ytick.major.pad:             2.0
+ytick.major.size:            4.0
+ytick.major.width:           0.6
+ytick.minor.pad:             2.0
+ytick.minor.size:            2.0
+ytick.minor.width:           0.48
+ytick.minor.visible:         True

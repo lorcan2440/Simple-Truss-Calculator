@@ -4,12 +4,12 @@ cd Build
 pip install --upgrade pyinstaller
 
 :: build with basic optimisations
-python -O -m PyInstaller                                                                    ^
-    ../Source/Truss_Calculator.py                                                           ^
-    --onefile                                                                               ^
-    --splash ../Media/TrussBridge.jpg                                                       ^
-    --icon ../Media/TrussIcon.ico                                                           ^  
-    --upx-dir C:\Users\lnick\Downloads\upx-3.96-win64\upx-3.96-win64                        ^
+python -O -m PyInstaller ^
+    ../Source/Truss_Calculator.py ^
+    --onefile ^
+    --splash ../Media/TrussBridge.jpg ^
+    --upx-dir C:/CLI-Applications/upx/ ^
+    --icon ../Media/TrussIcon.ico ^
     --noconsole
 
 echo " --- If the build completed succesfully, it can be found in the `dist` folder. --- "

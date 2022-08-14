@@ -398,12 +398,12 @@ class Truss(metaclass=ClassIter):
             # errors in the solver function). Currently set to 10 times smaller than the least
             # significant digit of the smallest internal force value.
             # NOTE: maybe move this functionality into `round_data()`.
-            # SMALL_NUM = 1e-8
-            SMALL_NUM = 0.1 * 10 ** (-1 * self.sig_figs) * min(
-                [abs(f) for f in self.results.values()
-                 if type(f) is not tuple and f > (0.1 * 10 ** (-1 * self.sig_figs))])
-
-            print(SMALL_NUM)
+            try:
+                SMALL_NUM = 0.1 * 10 ** (-1 * self.sig_figs) * min(
+                    [abs(f) for f in self.results.values()
+                    if type(f) is not tuple and f > (0.1 * 10 ** (-1 * self.sig_figs))])
+            except ValueError:  # triggered if all forces are zero
+                SMALL_NUM = 1e-8
 
             for item in self.results:
 
@@ -585,7 +585,7 @@ class Truss(metaclass=ClassIter):
         elif str(e) == "Singular matrix":
             raise TypeError('''
             The truss contains mechanistic and/or overconstrained components despite
-            being globally statically determinate. It cannot be solved.''')
+            being globally statically determinate. It cannot be solved without compatibility.''')
 
         else:
             raise TypeError("Something else went wrong. Requires attention.")
@@ -897,6 +897,7 @@ def plot_diagram(truss: Truss, results: Truss.Result,
     plt.axis('equal')
     plt.xlabel(f'$x$-position / {truss.units.split(",")[1]}')
     plt.ylabel(f'$y$-position / {truss.units.split(",")[1]}')
+    plt.style.use('./proplot_style.mplstyle')
 
     ax = plt.gca()
     spines = ax.spines
@@ -1105,14 +1106,14 @@ def set_matplotlib_fullscreen() -> None:
 
     backend = str(plt.get_backend())
     mgr = plt.get_current_fig_manager()
-    if backend == 'TkAgg':
+    if backend == 'TkAgg':  # used if PyQt5 is not installed
         if os.name == 'nt':
             mgr.window.state('zoomed')
         else:
             mgr.resize(*mgr.window.maxsize())
     elif backend == 'wxAgg':
         mgr.frame.Maximize(True)
-    elif backend in ['Qt4Agg', 'Qt5Agg']:
+    elif backend in ['Qt4Agg', 'Qt5Agg', 'QtAgg']:  # used if PyQt5 is installed
         mgr.window.showMaximized()
     else:
         raise RuntimeWarning(f'The backend in use, {backend}, is not supported in fullscreen mode.')
