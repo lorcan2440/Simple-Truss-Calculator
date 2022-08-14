@@ -1,5 +1,7 @@
 # Simple Truss Calculator
 
+![Media/GitHub/example_screenshot.png]
+
 Calculator with display for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss.
 
 100% Python; intended for personal use only but documented as a module.
