@@ -5,8 +5,6 @@ Simple Truss Calculator
 
 Version:    1.5
 Source:     https://github.com/lorcan2440/Simple-Truss-Calculator
-By:         Lorcan Nicholls
-Contact:    lnick2440@gmail.com
 Tests:      test_TrussCalc.py
 
 Calculator and interactive program for finding internal/reaction forces,
