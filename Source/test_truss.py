@@ -38,7 +38,7 @@ def test_build_standard():
 
     truss.add_supports([
         {'name': 'A', 'joint_name': 'A', 'support_type': 'encastre'},
-        {'name': 'E', 'joint_name': 'E', 'support_type': 'pin', 'pin_rotation': -math.pi/2}
+        {'name': 'E', 'joint_name': 'E', 'support_type': 'pin', 'pin_rotation': -math.pi / 2}
     ])
 
     results = Result(truss, solution_method=utils.SolveMethod.NUMPY_STD)
@@ -59,7 +59,7 @@ def test_build_very_lazy():
     ])
 
     t.add_supports([
-        ('A', 'encastre'), ('E', 'pin', -math.pi/2)
+        ('A', 'encastre'), ('E', 'pin', -math.pi / 2)
     ])
 
     results = Result(t)

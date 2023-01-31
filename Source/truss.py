@@ -421,11 +421,11 @@ class Truss:
     # object builders
 
     def add_joints(self, list_of_joints: list[dict | tuple]):
-        '''
+        """
         Adds or replaces one or more joints to the truss, and returns the new truss.
-        
+
         #### Arguments
-        
+
         `list_of_joints` (list[dict | tuple]): a description of the joints
         to add, as one of the following:
         1) a list of dicts of the form {"name": str, "x": float, "y": float}, or
@@ -442,70 +442,81 @@ class Truss:
         If input type 3) is chosen, then names for the joints will be generated automatically as
         'A', 'B', 'C', ..., 'Z', 'AA', 'AB', ... These joints will not be replaced until a name is
         specified manually in a subsequent build call.
-        
+
         #### Returns
-        
+
         Truss: the truss with the joints attached, permitting a builder pattern usage.
-        
+
         #### Raises
-        
+
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
-        '''        
+        """
 
         _data_types = set([type(d) for d in list_of_joints])
         _lengths = set([len(d) for d in list_of_joints])
 
         if len(_data_types) != 1:
-            raise ValueError('All entries in `list_of_joints` must have '
-            f'the same type: either tuples or dicts. Got a mixture: {_data_types}.')
-        
-        if len(_lengths) != 1:
-            raise ValueError('All entries in `list_of_joints` must have '
-            f'the same length. Got a mixture: {_lengths}.')
+            raise ValueError(
+                "All entries in `list_of_joints` must have "
+                f"the same type: either tuples or dicts. Got a mixture: {_data_types}."
+            )
 
-        (_data_type, ) = _data_types
-        (_length, ) = _lengths
+        if len(_lengths) != 1:
+            raise ValueError(
+                "All entries in `list_of_joints` must have "
+                f"the same length. Got a mixture: {_lengths}."
+            )
+
+        (_data_type,) = _data_types
+        (_length,) = _lengths
 
         if _data_type is dict:
             # Input type 1): expect input of the form {'name': ..., 'x': ..., 'y': ...}
             self.add_joints(
-                [tuple(item[key] for key in ('name', 'x', 'y') if key in item)
-                for item in list_of_joints]
+                [
+                    tuple(item[key] for key in ("name", "x", "y") if key in item)
+                    for item in list_of_joints
+                ]
             )
 
         elif _data_type is tuple and _length == 3:
             # Input type 2): expect input of the form (name, x, y) - replace existing names
             for info in list_of_joints:
                 self.joints[info[0]] = Joint(self, *info)
-        
+
         elif _data_type is tuple and _length == 2:
             # Input type 3): expect input of the form (x, y) - auto generate names
             existing_num = len(self.joints.keys())
-            for s, info in zip(utils.iter_all_strings(start=existing_num), list_of_joints):
+            for s, info in zip(
+                utils.iter_all_strings(start=existing_num), list_of_joints
+            ):
                 self.joints[s] = Joint(self, s, *info)
-        
-        else:
-            raise ValueError('The input `list_of_joints` must be one of the following: \n'
-            '1) a list of dicts of the form {"name": str, "x": float, "y": float}, or \n '
-            '2) a list of 3-tuples of the form (str, float, float) representing (name, x, y), or \n '
-            '3) a list of 2-tuples of the form (float, float) representing (x, y).')
-        
-        return self
-        
 
+        else:
+            raise ValueError(
+                "The input `list_of_joints` must be one of the following: \n"
+                '1) a list of dicts of the form {"name": str, "x": float, "y": float}, or \n '
+                "2) a list of 3-tuples of the form (str, float, float) representing (name, x, y), or \n "
+                "3) a list of 2-tuples of the form (float, float) representing (x, y)."
+            )
+
+        return self
 
     def add_bars(self, list_of_bars: list[dict | tuple | str]):
 
-        '''
+        """
         Adds or replaces one or more bars to the truss, and returns the new truss.
-        
+
         #### Arguments
-        
+
         `list_of_bars` (list[dict | tuple]): a description of the bars
         to add, as one of the following:
-        1) a list of dicts of the form {"name": str, "first_joint_name": str, "second_joint_name": str, "bar_params": dict}, or
-        2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "name", "first_joint_name", "second_joint_name"[, "bar params"], or
-        3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing ("first_joint_name", "second_joint_name"[, "bar_params"], or
+        1) a list of dicts of the form {"name": str, "first_joint_name": str,
+            "second_joint_name": str, "bar_params": dict}, or
+        2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing
+            "name", "first_joint_name", "second_joint_name"[, "bar params"], or
+        3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing
+            ("first_joint_name", "second_joint_name"[, "bar_params"], or
         4) a list of 1 or 2-tuples of the form (str[, dict]) representing ("name"[, "bar_params"]), or
         5) a list of strings representing the names only.
 
@@ -525,33 +536,39 @@ class Truss:
 
         If input type 5) is chosen, rules in 4) apply, and default bar params will be used.
         This is the laziest way to fill in the bars.
-        
+
         #### Returns
-        
+
         Truss: the truss with the bars attached, permitting a builder pattern usage.
-        
+
         #### Raises
-        
+
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
-        '''
+        """
 
         _data_types = set([type(d) for d in list_of_bars])
         _lengths = set([len(d) for d in list_of_bars])
 
         if len(_data_types) != 1:
-            raise ValueError('All entries in `list_of_bars` must have '
-            f'the same type: either tuples / dicts / strings. Got a mixture: {_data_types}.')
+            raise ValueError(
+                "All entries in `list_of_bars` must have "
+                f"the same type: either tuples / dicts / strings. Got a mixture: {_data_types}."
+            )
 
-        (_data_type, ) = _data_types
-        (_length, ) = _lengths
+        (_data_type,) = _data_types
+        (_length,) = _lengths
 
         if _data_type is dict:
-            # Input type 1): expect input of the form {"name": str, "first_joint_name": str, "second_joint_name": str, "bar_params": dict}
+            # Input type 1): expect input of the form {"name": str, "first_joint_name": str,
+            # "second_joint_name": str, "bar_params": dict}
             for info in list_of_bars:
-                name = info.get('name', None) or info['first_joint_name'] + info['second_joint_name']
-                first_joint_name = info.get('first_joint_name', None) or name[0]
-                second_joint_name = info.get('second_joint_name', None) or name[1]
-                bar_params = info.get('bar_params', None)
+                name = (
+                    info.get("name", None)
+                    or info["first_joint_name"] + info["second_joint_name"]
+                )
+                first_joint_name = info.get("first_joint_name", None) or name[0]
+                second_joint_name = info.get("second_joint_name", None) or name[1]
+                bar_params = info.get("bar_params", None)
                 first_joint = self.joints[first_joint_name]
                 second_joint = self.joints[second_joint_name]
                 self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
@@ -568,59 +585,72 @@ class Truss:
                     bar_params = info[3] if len(info) > 3 else None
                     first_joint = self.joints[first_joint_name]
                     second_joint = self.joints[second_joint_name]
-                    self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+                    self.bars[name] = Bar(
+                        self, name, first_joint, second_joint, bar_params
+                    )
                 elif sub_types[:2] == (str, str):
                     # Input type 3): expect input of the form (str, str[, dict])
                     first_joint_name = info[0]
                     second_joint_name = info[1]
                     name = first_joint_name + second_joint_name
-                    bar_params = info[2] if len(info) > 2 else None             
+                    bar_params = info[2] if len(info) > 2 else None
                     first_joint = self.joints[first_joint_name]
                     second_joint = self.joints[second_joint_name]
-                    self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
-                elif sub_types[:1] == (str, ):
+                    self.bars[name] = Bar(
+                        self, name, first_joint, second_joint, bar_params
+                    )
+                elif sub_types[:1] == (str,):
                     # Input type 4): expect input of the form (str[, dict])
                     name = info[0]
                     first_joint_name = name[0]
                     second_joint_name = name[1]
-                    bar_params = info[1] if len(info) > 1 else None             
+                    bar_params = info[1] if len(info) > 1 else None
                     first_joint = self.joints[first_joint_name]
                     second_joint = self.joints[second_joint_name]
-                    self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+                    self.bars[name] = Bar(
+                        self, name, first_joint, second_joint, bar_params
+                    )
 
         elif _data_type is str:
             # Input type 5): expect input to be a list of 2-character strings
             if _length != 2:
-                raise ValueError('Lazily evaluated bar names must be 2 letters long.')
+                raise ValueError("Lazily evaluated bar names must be 2 letters long.")
             for name in list_of_bars:
                 first_joint_name = name[0]
                 second_joint_name = name[1]
-                bar_params = None            
+                bar_params = None
                 first_joint = self.joints[first_joint_name]
                 second_joint = self.joints[second_joint_name]
                 self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
 
         else:
-            raise ValueError('The input `list_of_bars` must be one of the following: \n'
-            '1) a list of dicts of the form {"name": str, "first_joint_name": str, "second_joint_name": str, "bar_params": dict}, or \n'
-            '2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "name", "first_joint_name", "second_joint_name"[, "bar params"], or \n'
-            '3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing ("first_joint_name", "second_joint_name"[, "bar_params"], or \n'
-            '4) a list of 1 or 2-tuples of the form (str[, dict]) representing ("name"[, "bar_params"]), or \n'
-            '5) a list of strings representing the names only.')
+            raise ValueError(
+                "The input `list_of_bars` must be one of the following: \n"
+                '1) a list of dicts of the form {"name": str, "first_joint_name": str, '
+                '"second_joint_name": str, "bar_params": dict}, or \n'
+                "2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "
+                '"name", "first_joint_name", "second_joint_name"[, "bar params"], or \n'
+                "3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing "
+                '("first_joint_name", "second_joint_name"[, "bar_params"], or \n'
+                "4) a list of 1 or 2-tuples of the form (str[, dict]) representing "
+                '("name"[, "bar_params"]), or \n'
+                "5) a list of strings representing the names only."
+            )
 
         return self
 
     def add_loads(self, list_of_loads: list[dict]):
-    
-        '''
+
+        """
         Adds or replaces one or more loads to the truss, and returns the new truss.
-        
+
         #### Arguments
-        
+
         `list_of_loads` (list[dict | tuple]): a description of the loads
         to add, as one of the following:
         1) a list of dicts of the form {"name": str, "joint_name": str, "x": float, "y": float}, or
-        2) a list of 4-tuples of the form (str, str, float, float) representing "name", "joint_name", "x", "y", or
+        2) a list of 4-tuples of the form (str, str, float, float) representing
+            "name", "joint_name", "x", "y", or
         3) a list of 3-tuples of the form (str, float, float) representing "joint_name", "x", "y".
 
         The data types of each item in the list must be consistent (no mixing of the above).
@@ -632,35 +662,38 @@ class Truss:
 
         If input type 3) is chosen, the load name will be generated automatically as
         `f'{joint_name}'`.
-        
+
         #### Returns
-        
+
         Truss: the truss with the loads attached, permitting a builder pattern usage.
-        
+
         #### Raises
-        
+
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
-        '''
+        """
 
         _data_types = set([type(d) for d in list_of_loads])
         _lengths = set([len(d) for d in list_of_loads])
 
         if len(_data_types) != 1:
-            raise ValueError('All entries in `list_of_loads` must have '
-            f'the same type: either tuples or dicts. Got a mixture: {_data_types}.')
+            raise ValueError(
+                "All entries in `list_of_loads` must have "
+                f"the same type: either tuples or dicts. Got a mixture: {_data_types}."
+            )
 
-        (_data_type, ) = _data_types
-        (_length, ) = _lengths
+        (_data_type,) = _data_types
+        (_length,) = _lengths
 
         if _data_type is dict:
-            # Input type 1): expect input of the form {"name": str, "joint_name": str, "x": float, "y": float}
+            # Input type 1): expect input of the form {"name": str, "joint_name": str,
+            # "x": float, "y": float}
             for item in list_of_loads:
-                name = item.get('name', None) or item.get('joint_name')
-                joint_name = item.get('joint_name', None) or item.get('name')
-                x, y = item.get('x'), item.get('y')
+                name = item.get("name", None) or item.get("joint_name")
+                joint_name = item.get("joint_name", None) or item.get("name")
+                x, y = item.get("x"), item.get("y")
                 joint = self.joints[joint_name]
                 self.loads[name] = Load(name, joint, x, y)
-        
+
         elif _data_type is tuple:
             # Input type 2) or 3): expect input of the form (str[, str], float, float)
             for item in list_of_loads:
@@ -675,28 +708,35 @@ class Truss:
                     name = joint_name
                 joint = self.joints[joint_name]
                 self.loads[name] = Load(name, joint, x, y)
-        
+
         else:
-            raise ValueError('The input `list_of_loads` must be one of the following: \n'
-            '1) a list of dicts of the form {"name": str, "joint_name": str, "x": float, "y": float}, or \n'
-            '2) a list of 4-tuples of the form (str, str, float, float) representing "name", "joint_name", "x", "y", or \n'
-            '3) a list of 3-tuples of the form (str, float, float) representing "joint_name", "x", "y".')
+            raise ValueError(
+                "The input `list_of_loads` must be one of the following: \n"
+                "1) a list of dicts of the form "
+                '{"name": str, "joint_name": str, "x": float, "y": float}, or \n'
+                "2) a list of 4-tuples of the form (str, str, float, float) representing "
+                '"name", "joint_name", "x", "y", or \n'
+                "3) a list of 3-tuples of the form (str, float, float) representing "
+                '"joint_name", "x", "y".'
+            )
 
         return self
 
-        
     def add_supports(self, list_of_supports: list[dict | tuple | str]):
 
-        '''
+        """
         Adds or replaces one or more loads to the truss, and returns the new truss.
-        
+
         #### Arguments
-        
+
         `list_of_supports` (list[dict | tuple | str]): a description of the loads
         to add, as one of the following:
-        1) a list of dicts of the form {"name": str, "joint_name": str, "support_type": str, "pin_rotation": float}, or
-        2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "name", "joint_name", "support_type", "pin_rotation", or
-        3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "joint_name", "support_type", "pin_rotation", or
+        1) a list of dicts of the form {"name": str, "joint_name": str, "support_type": str,
+            "pin_rotation": float}, or
+        2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "name",
+            "joint_name", "support_type", "pin_rotation", or
+        3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "joint_name",
+            "support_type", "pin_rotation", or
         4) TODO: a list of strings representing the joint_names only.
 
         The data types of each item in the list must be consistent (no mixing of the above).
@@ -708,34 +748,37 @@ class Truss:
 
         If input type 3) is chosen, the load name will be generated automatically as
         `f'{joint_name}'`.
-        
+
         #### Returns
-        
+
         Truss: the truss with the loads attached, permitting a builder pattern usage.
-        
+
         #### Raises
-        
+
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
-        '''
+        """
 
         _data_types = set([type(d) for d in list_of_supports])
 
         if len(_data_types) != 1:
-            raise ValueError('All entries in `list_of_loads` must have '
-            f'the same type: either tuples or dicts. Got a mixture: {_data_types}.')
+            raise ValueError(
+                "All entries in `list_of_loads` must have "
+                f"the same type: either tuples or dicts. Got a mixture: {_data_types}."
+            )
 
-        (_data_type, ) = _data_types
+        (_data_type,) = _data_types
 
         if _data_type is dict:
-            # Input type 1): expect input of the form {"name": str, "joint_name": str, "support_type": str, "pin_rotation": float}
+            # Input type 1): expect input of the form {"name": str, "joint_name": str,
+            # "support_type": str, "pin_rotation": float}
             for item in list_of_supports:
-                name = item.get('name', None) or item.get('joint_name')
-                joint_name = item.get('joint_name', None) or item.get('name')
-                support_type = item.get('support_type', 'pin')
-                pin_rotation = item.get('pin_rotation', 0)
+                name = item.get("name", None) or item.get("joint_name")
+                joint_name = item.get("joint_name", None) or item.get("name")
+                support_type = item.get("support_type", "pin")
+                pin_rotation = item.get("pin_rotation", 0)
                 joint = self.joints[joint_name]
                 self.supports[name] = Support(name, joint, support_type, pin_rotation)
-            
+
         elif _data_type is tuple:
             # Input type 2) or 3): expect input of the form (str, str[, str[, float]])
             for item in list_of_supports:
@@ -745,14 +788,18 @@ class Truss:
                     name, joint_name, support_type = item[:3]
                     pin_rotation = item[3] if len(item) > 3 else 0
                     joint = self.joints[joint_name]
-                    self.supports[name] = Support(name, joint, support_type, pin_rotation)
+                    self.supports[name] = Support(
+                        name, joint, support_type, pin_rotation
+                    )
                 elif sub_types[:2] == (str, str):
                     # Input type 3): expect input of the form (str, str[, float])
                     joint_name, support_type = item[:2]
                     name = joint_name
                     pin_rotation = item[2] if len(item) > 2 else 0
                     joint = self.joints[joint_name]
-                    self.supports[name] = Support(name, joint, support_type, pin_rotation)
+                    self.supports[name] = Support(
+                        name, joint, support_type, pin_rotation
+                    )
 
         elif _data_type is str:
             # TODO: Input type 4): input gives joint names,
@@ -762,13 +809,17 @@ class Truss:
             raise NotImplementedError()
 
         else:
-            raise ValueError('The input `list_of_loads` must be one of the following: \n'
-            '1) a list of dicts of the form {"name": str, "joint_name": str, "support_type": str, "pin_rotation": float}, or \n'
-            '2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "name", "joint_name", "support_type", "pin_rotation", or \n'
-            '3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "joint_name", "support_type", "pin_rotation".')
-        
-        return self
+            raise ValueError(
+                "The input `list_of_loads` must be one of the following: \n"
+                '1) a list of dicts of the form {"name": str, "joint_name": str, '
+                '"support_type": str, "pin_rotation": float}, or \n'
+                "2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "
+                '"name", "joint_name", "support_type", "pin_rotation", or \n'
+                "3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "
+                '"joint_name", "support_type", "pin_rotation".'
+            )
 
+        return self
 
     # TRUSS METHODS
 
@@ -1220,8 +1271,12 @@ class Truss:
 # Classes end here, main program functions start here
 
 
-def plot_diagram(truss: Truss, results: Result,
-        full_screen: bool = False, show_reactions: bool = True) -> None:
+def plot_diagram(
+    truss: Truss,
+    results: Result,
+    full_screen: bool = False,
+    show_reactions: bool = True,
+) -> None:
 
     """
     Create a matplotlib output image showing the truss geometry, annotated with arrows, labels and supports.
@@ -1358,7 +1413,7 @@ def plot_diagram(truss: Truss, results: Result,
             load.joint.y + LEN / 3 * math.sin(label_angle),
             f'{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units.split(",")[0]}',
             va="center",
-            ha="left" if -math.pi/2 < label_angle <= math.pi/2 else "right",
+            ha="left" if -math.pi / 2 < label_angle <= math.pi / 2 else "right",
         )
 
     # Graphical improvements
