@@ -1,7 +1,0 @@
-[flake8]
-exclude =
-    _extensions/,
-    References/,
-    Examples/,
-    __pycache__,
-    Source/__test_trussCalc.py
