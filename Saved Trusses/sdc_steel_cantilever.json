@@ -1,10 +1,9 @@
 {
     "truss": {
         "name": "SDC: Steel Cantilever",
-        "var_name": "sdc_steel_cantilever",
         "default_bar_params": {
-            "b": 12.5,
-            "t": 0.7,
+            "b": 16,
+            "t": 1.1,
             "D": 5,
             "E": 210,
             "strength_max": 0.216
@@ -13,50 +12,41 @@
     },
     "joints": [
         {
-            "name": "Joint A",
-            "var_name": "joint_a",
+            "name": "A",
             "x": 0,
             "y": 0
         },
         {
-            "name": "Joint B",
-            "var_name": "joint_b",
+            "name": "B",
             "x": 290,
             "y": -90
         },
         {
-            "name": "Joint C",
-            "var_name": "joint_c",
+            "name": "C",
             "x": 815,
             "y": 127.5
         },
         {
-            "name": "Joint D",
-            "var_name": "joint_d",
+            "name": "D",
             "x": 290,
             "y": 345
         },
         {
-            "name": "Joint E",
-            "var_name": "joint_e",
+            "name": "E",
             "x": 0,
             "y": 255
         },
         {
-            "name": "Joint F",
-            "var_name": "joint_f",
+            "name": "F",
             "x": 220.836,
             "y": 127.5
         }
     ],
     "bars": [
         {
-            "name": "Bar AB",
-            "var_name": "bar_ab",
-            "connected_joint_names": [
-                "Joint A",
-                "Joint B"
-            ],
+            "name": "AB",
+            "first_joint_name": "A",
+            "second_joint_name": "B",
             "bar_params": {
                 "b": 16,
                 "t": 1.1,
@@ -66,72 +56,9 @@
             }
         },
         {
-            "name": "Bar BC",
-            "var_name": "bar_bc",
-            "connected_joint_names": [
-                "Joint B",
-                "Joint C"
-            ],
-            "bar_params": {
-                "b": 19,
-                "t": 1.1,
-                "D": 5,
-                "E": 210,
-                "strength_max": 0.216
-            }
-        },
-        {
-            "name": "Bar CD",
-            "var_name": "bar_cd",
-            "connected_joint_names": [
-                "Joint C",
-                "Joint D"
-            ],
-            "bar_params": {
-                "b": 16,
-                "t": 0.9,
-                "D": 5,
-                "E": 210,
-                "strength_max": 0.216
-            }
-        },
-        {
-            "name": "Bar DE",
-            "var_name": "bar_de",
-            "connected_joint_names": [
-                "Joint D",
-                "Joint E"
-            ],
-            "bar_params": {
-                "b": 16,
-                "t": 0.9,
-                "D": 5,
-                "E": 210,
-                "strength_max": 0.216
-            }
-        },
-        {
-            "name": "Bar EF",
-            "var_name": "bar_ef",
-            "connected_joint_names": [
-                "Joint E",
-                "Joint F"
-            ],
-            "bar_params": {
-                "b": 16,
-                "t": 0.9,
-                "D": 5,
-                "E": 210,
-                "strength_max": 0.216
-            }
-        },
-        {
-            "name": "Bar AF",
-            "var_name": "bar_af",
-            "connected_joint_names": [
-                "Joint F",
-                "Joint A"
-            ],
+            "name": "BC",
+            "first_joint_name": "B",
+            "second_joint_name": "C",
             "bar_params": {
                 "b": 16,
                 "t": 1.1,
@@ -141,30 +68,72 @@
             }
         },
         {
-            "name": "Bar DF",
-            "var_name": "bar_df",
-            "connected_joint_names": [
-                "Joint F",
-                "Joint D"
-            ],
+            "name": "CD",
+            "first_joint_name": "C",
+            "second_joint_name": "D",
             "bar_params": {
                 "b": 16,
-                "t": 0.9,
+                "t": 1.1,
                 "D": 5,
                 "E": 210,
                 "strength_max": 0.216
             }
         },
         {
-            "name": "Bar BF",
-            "var_name": "bar_bf",
-            "connected_joint_names": [
-                "Joint F",
-                "Joint B"
-            ],
+            "name": "DE",
+            "first_joint_name": "D",
+            "second_joint_name": "E",
             "bar_params": {
-                "b": 12.5,
-                "t": 0.7,
+                "b": 16,
+                "t": 1.1,
+                "D": 5,
+                "E": 210,
+                "strength_max": 0.216
+            }
+        },
+        {
+            "name": "EF",
+            "first_joint_name": "E",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 16,
+                "t": 1.1,
+                "D": 5,
+                "E": 210,
+                "strength_max": 0.216
+            }
+        },
+        {
+            "name": "AF",
+            "first_joint_name": "F",
+            "second_joint_name": "A",
+            "bar_params": {
+                "b": 16,
+                "t": 1.1,
+                "D": 5,
+                "E": 210,
+                "strength_max": 0.216
+            }
+        },
+        {
+            "name": "DF",
+            "first_joint_name": "D",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 16,
+                "t": 1.1,
+                "D": 5,
+                "E": 210,
+                "strength_max": 0.216
+            }
+        },
+        {
+            "name": "BF",
+            "first_joint_name": "B",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 16,
+                "t": 1.1,
                 "D": 5,
                 "E": 210,
                 "strength_max": 0.216
@@ -174,80 +143,83 @@
     "loads": [
         {
             "name": "W",
-            "var_name": "w",
-            "joint_name": "Joint C",
+            "joint_name": "C",
             "x": 0,
             "y": -0.675
         }
     ],
     "supports": [
         {
-            "name": "Support A",
-            "var_name": "support_a",
-            "joint_name": "Joint A",
+            "name": "A",
+            "joint_name": "A",
             "support_type": "encastre",
-            "roller_normal": null,
+            "roller_normal": [
+                6.123233995736766e-17,
+                1.0
+            ],
             "pin_rotation": 0
         },
         {
-            "name": "Support E",
-            "var_name": "support_e",
-            "joint_name": "Joint E",
+            "name": "E",
+            "joint_name": "E",
             "support_type": "pin",
-            "roller_normal": null,
-            "pin_rotation": 90
+            "roller_normal": [
+                1.0,
+                0.0
+            ],
+            "pin_rotation": -1.5707963267948966
         }
     ],
     "results": {
         "internal_forces": {
-            "Bar AB": -1.071058691715033,
-            "Bar BC": -0.8817988998963281,
-            "Bar CD": 0.8817988998963281,
-            "Bar DE": 1.071058691715033,
-            "Bar EF": 1.3099197844105204,
-            "Bar AF": -1.3099197844105204,
-            "Bar DF": -0.6872788011813494,
-            "Bar BF": 0.6872788011813494
+            "AB": -1.0710586917150329,
+            "BC": -0.881798899896328,
+            "CD": 0.881798899896328,
+            "DE": 1.0710586917150329,
+            "EF": 1.30991978441052,
+            "AF": -1.30991978441052,
+            "DF": -0.6872788011813492,
+            "BF": 0.6872788011813494
         },
         "reaction_forces": {
-            "Support A": [
-                2.15735294127538,
-                0.33750000006654124
+            "A": [
+                2.1573529412762738,
+                0.3375
             ],
-            "Support E": [
-                -2.15735294127538,
-                0.33750000006654124
+            "E": [
+                -2.1573529412762738,
+                0.3375000000000002
             ]
         },
         "stresses": {
-            "Bar AB": -0.05694091928309585,
-            "Bar BC": -0.037902381254946396,
-            "Bar CD": 0.057296874587155815,
-            "Bar DE": 0.06959445690156159,
-            "Bar EF": 0.08511499573817545,
-            "Bar AF": -0.0696395419675981,
-            "Bar DF": -0.0446574919546036,
-            "Bar BF": 0.07933954414791913
+            "AB": -0.05694091928309584,
+            "BC": -0.046879261025854754,
+            "CD": 0.046879261025854754,
+            "DE": 0.05694091928309584,
+            "EF": 0.06963954196759807,
+            "AF": -0.06963954196759807,
+            "DF": -0.036537947962857475,
+            "BF": 0.03653794796285749
         },
         "strains": {
-            "Bar AB": -0.0002711472346814088,
-            "Bar BC": -0.00018048752978545903,
-            "Bar CD": 0.0002728422599388372,
-            "Bar DE": 0.00033140217572172185,
-            "Bar EF": 0.0004053095035151212,
-            "Bar AF": -0.0003316168665123719,
-            "Bar DF": -0.00021265472359335047,
-            "Bar BF": 0.0003778073530853292
+            "AB": -0.00027114723468140876,
+            "BC": -0.00022323457631359407,
+            "CD": 0.00022323457631359407,
+            "DE": 0.00027114723468140876,
+            "EF": 0.00033161686651237175,
+            "AF": -0.00033161686651237175,
+            "DF": -0.0001739902283945594,
+            "BF": 0.00017399022839455948
         },
         "buckling_ratios": {
-            "Bar AB": 18.97778306336122,
-            "Bar BC": 29.908968536075708,
-            "Bar CD": 35.5169001365899,
-            "Bar DE": 18.97778306336122,
-            "Bar EF": 15.937474129390768,
-            "Bar AF": 15.937474129390768,
-            "Bar DF": 14.26450863594677,
-            "Bar BF": 18.258571054011867
+            "AB": 18.97778306336122,
+            "BC": 35.5169001365899,
+            "CD": 35.5169001365899,
+            "DE": 18.97778306336122,
+            "EF": 15.937474129390768,
+            "AF": 15.937474129390768,
+            "DF": 14.26450863594677,
+            "BF": 14.26450863594677
         }
     }
 }

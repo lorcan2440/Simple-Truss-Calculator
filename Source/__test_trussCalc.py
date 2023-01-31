@@ -1,6 +1,7 @@
 import unittest
-import Truss_Calculator as tc  # local file import
+import truss as tc  # local file import
 
+# CURRENTLY NOT WORTH RUNNING - REFACTOR ALL TEST CASES FOR NEW PROGRAM
 
 class TrussTests(unittest.TestCase):
 
