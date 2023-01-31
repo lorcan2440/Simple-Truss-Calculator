@@ -37,8 +37,8 @@ jobs:
       - name: Lint with flake8
         run: flake8 --statistics
 
-      - name: Run deliverables (tasks)
-        run: sh ./runtasks.sh
+      #- name: Run deliverables (tasks)
+      #  run: sh ./runtasks.sh
 
       #- name: Run applications
        # run: |
