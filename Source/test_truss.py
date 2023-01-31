@@ -46,4 +46,5 @@ def test_build_standard():
     plot_diagram(truss, results, show_reactions=True)
 
 
-test_build_standard()
+if __name__ == '__main__':
+    test_build_standard()
