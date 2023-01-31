@@ -43,7 +43,7 @@ def test_build_standard():
 
     results = Result(truss, solution_method=utils.SolveMethod.NUMPY_STD)
 
-    plot_diagram(truss, results, show_reactions=True)
+    plot_diagram(truss, results, full_screen=False, show_reactions=True)
 
 
 if __name__ == '__main__':

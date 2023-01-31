@@ -1076,7 +1076,8 @@ class Truss:
 # Classes end here, main program functions start here
 
 
-def plot_diagram(truss: Truss, results: Result, show_reactions: bool = True) -> None:
+def plot_diagram(truss: Truss, results: Result,
+        full_screen: bool = False, show_reactions: bool = True) -> None:
 
     """
     Create a matplotlib output image showing the truss geometry, annotated with arrows, labels and supports.
@@ -1239,7 +1240,9 @@ def plot_diagram(truss: Truss, results: Result, show_reactions: bool = True) -> 
     ax.xaxis.label.set_color(AXES_COLOUR)  # axis name labels
     ax.yaxis.label.set_color(AXES_COLOUR)
 
-    utils.set_matplotlib_fullscreen()
+    if full_screen:
+        utils.set_matplotlib_fullscreen()
+
     plt.show()
 
 
