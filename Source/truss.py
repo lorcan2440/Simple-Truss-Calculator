@@ -420,209 +420,355 @@ class Truss:
 
     # object builders
 
-    def add_joints(self, list_of_joints: list[dict], replace_if_same_name: bool = True):
+    def add_joints(self, list_of_joints: list[dict | tuple]):
+        '''
+        Adds or replaces one or more joints to the truss, and returns the new truss.
+        
+        #### Arguments
+        
+        `list_of_joints` (list[dict | tuple]): a description of the joints
+        to add, as one of the following:
+        1) a list of dicts of the form {"name": str, "x": float, "y": float}, or
+        2) a list of 3-tuples of the form (str, float, float) representing (name, x, y), or
+        3) a list of 2-tuples of the form (float, float) representing (x, y).
 
-        """
-        Params to be specified:
-        name (str)
-        x (float)
-        y (float)
-        """
+        The data types of each item in the list must be consistent (no mixing of the above).
 
-        curr_joint_names = self.get_all_objs(self.joints, str_names_only=True)
+        #### Notes
 
-        for kwargs in list_of_joints:
-            joint_name = kwargs.get("name", None)
-            x, y = kwargs.get("x"), kwargs.get("y")  # required
+        If joint names are provided, the new joints will overwrite (replace) any existing joints
+        with the same name.
 
-            new_joint_name = utils.convert_to_valid_var_name(
-                joint_name, self.joints, replace_if_same_name
+        If input type 3) is chosen, then names for the joints will be generated automatically as
+        'A', 'B', 'C', ..., 'Z', 'AA', 'AB', ... These joints will not be replaced until a name is
+        specified manually in a subsequent build call.
+        
+        #### Returns
+        
+        Truss: the truss with the joints attached, permitting a builder pattern usage.
+        
+        #### Raises
+        
+        `ValueError`: if a mixture of input types is given, or if the type is not one the above.
+        '''        
+
+        _data_types = set([type(d) for d in list_of_joints])
+        _lengths = set([len(d) for d in list_of_joints])
+
+        if len(_data_types) != 1:
+            raise ValueError('All entries in `list_of_joints` must have '
+            f'the same type: either tuples or dicts. Got a mixture: {_data_types}.')
+        
+        if len(_lengths) != 1:
+            raise ValueError('All entries in `list_of_joints` must have '
+            f'the same length. Got a mixture: {_lengths}.')
+
+        (_data_type, ) = _data_types
+        (_length, ) = _lengths
+
+        if _data_type is dict:
+            # Input type 1): expect input of the form {'name': ..., 'x': ..., 'y': ...}
+            self.add_joints(
+                [tuple(item[key] for key in ('name', 'x', 'y') if key in item)
+                for item in list_of_joints]
             )
 
-            if joint_name in curr_joint_names and not replace_if_same_name:
-                warnings.warn(
-                    f"The joint {joint_name} was renamed to {new_joint_name}"
-                    f"because it already exists in the truss and `replace_if_same_name`"
-                    "was set to `False`."
-                )
+        elif _data_type is tuple and _length == 3:
+            # Input type 2): expect input of the form (name, x, y) - replace existing names
+            for info in list_of_joints:
+                self.joints[info[0]] = Joint(self, *info)
+        
+        elif _data_type is tuple and _length == 2:
+            # Input type 3): expect input of the form (x, y) - auto generate names
+            existing_num = len(self.joints.keys())
+            for s, info in zip(utils.iter_all_strings(start=existing_num), list_of_joints):
+                self.joints[s] = Joint(self, s, *info)
+        
+        else:
+            raise ValueError('The input `list_of_joints` must be one of the following: \n'
+            '1) a list of dicts of the form {"name": str, "x": float, "y": float}, or \n '
+            '2) a list of 3-tuples of the form (str, float, float) representing (name, x, y), or \n '
+            '3) a list of 2-tuples of the form (float, float) representing (x, y).')
+        
+        return self
+        
 
-            self.joints[new_joint_name] = Joint(self, new_joint_name, x, y)
-            curr_joint_names.add(new_joint_name)
+
+    def add_bars(self, list_of_bars: list[dict | tuple | str]):
+
+        '''
+        Adds or replaces one or more bars to the truss, and returns the new truss.
+        
+        #### Arguments
+        
+        `list_of_bars` (list[dict | tuple]): a description of the bars
+        to add, as one of the following:
+        1) a list of dicts of the form {"name": str, "first_joint_name": str, "second_joint_name": str, "bar_params": dict}, or
+        2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "name", "first_joint_name", "second_joint_name"[, "bar params"], or
+        3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing ("first_joint_name", "second_joint_name"[, "bar_params"], or
+        4) a list of 1 or 2-tuples of the form (str[, dict]) representing ("name"[, "bar_params"]), or
+        5) a list of strings representing the names only.
+
+        The data types of each item in the list must be consistent (no mixing of the above).
+
+        #### Notes
+
+        If bar names are provided, the new joints will overwrite (replace) any existing joints
+        with the same name.
+
+        If input type 3) is chosen, the name will be generated automatically as
+        `f'{first_joint_name}{second_joint_name}'`.
+
+        If input type 4) is chosen, the connected joints will be inferred automatically as
+        `first_joint_name = name[0]` and `second_joint_name = name[1]` (requires name of length 2
+        - will not work with more than 26 autogenerated joints!)
+
+        If input type 5) is chosen, rules in 4) apply, and default bar params will be used.
+        This is the laziest way to fill in the bars.
+        
+        #### Returns
+        
+        Truss: the truss with the bars attached, permitting a builder pattern usage.
+        
+        #### Raises
+        
+        `ValueError`: if a mixture of input types is given, or if the type is not one the above.
+        '''
+
+        _data_types = set([type(d) for d in list_of_bars])
+        _lengths = set([len(d) for d in list_of_bars])
+
+        if len(_data_types) != 1:
+            raise ValueError('All entries in `list_of_bars` must have '
+            f'the same type: either tuples / dicts / strings. Got a mixture: {_data_types}.')
+
+        (_data_type, ) = _data_types
+        (_length, ) = _lengths
+
+        if _data_type is dict:
+            # Input type 1): expect input of the form {"name": str, "first_joint_name": str, "second_joint_name": str, "bar_params": dict}
+            for info in list_of_bars:
+                name = info.get('name', None) or info['first_joint_name'] + info['second_joint_name']
+                first_joint_name = info.get('first_joint_name', None) or name[0]
+                second_joint_name = info.get('second_joint_name', None) or name[1]
+                bar_params = info.get('bar_params', None)
+                first_joint = self.joints[first_joint_name]
+                second_joint = self.joints[second_joint_name]
+                self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+
+        elif _data_type is tuple:
+            # Input type 2), 3) or 4): expect input of the form (str[, str[, str[, dict]]])
+            for info in list_of_bars:
+                sub_types = tuple([type(item) for item in info])
+                if sub_types[:3] == (str, str, str):
+                    # Input type 2): expect input of the form (str, str, str[, dict])
+                    name = info[0]
+                    first_joint_name = info[1]
+                    second_joint_name = info[2]
+                    bar_params = info[3] if len(info) > 3 else None
+                    first_joint = self.joints[first_joint_name]
+                    second_joint = self.joints[second_joint_name]
+                    self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+                elif sub_types[:2] == (str, str):
+                    # Input type 3): expect input of the form (str, str[, dict])
+                    first_joint_name = info[0]
+                    second_joint_name = info[1]
+                    name = first_joint_name + second_joint_name
+                    bar_params = info[2] if len(info) > 2 else None             
+                    first_joint = self.joints[first_joint_name]
+                    second_joint = self.joints[second_joint_name]
+                    self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+                elif sub_types[:1] == (str, ):
+                    # Input type 4): expect input of the form (str[, dict])
+                    name = info[0]
+                    first_joint_name = name[0]
+                    second_joint_name = name[1]
+                    bar_params = info[1] if len(info) > 1 else None             
+                    first_joint = self.joints[first_joint_name]
+                    second_joint = self.joints[second_joint_name]
+                    self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+
+        elif _data_type is str:
+            # Input type 5): expect input to be a list of 2-character strings
+            if _length != 2:
+                raise ValueError('Lazily evaluated bar names must be 2 letters long.')
+            for name in list_of_bars:
+                first_joint_name = name[0]
+                second_joint_name = name[1]
+                bar_params = None            
+                first_joint = self.joints[first_joint_name]
+                second_joint = self.joints[second_joint_name]
+                self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
+
+        else:
+            raise ValueError('The input `list_of_bars` must be one of the following: \n'
+            '1) a list of dicts of the form {"name": str, "first_joint_name": str, "second_joint_name": str, "bar_params": dict}, or \n'
+            '2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "name", "first_joint_name", "second_joint_name"[, "bar params"], or \n'
+            '3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing ("first_joint_name", "second_joint_name"[, "bar_params"], or \n'
+            '4) a list of 1 or 2-tuples of the form (str[, dict]) representing ("name"[, "bar_params"]), or \n'
+            '5) a list of strings representing the names only.')
 
         return self
 
-    def add_bars(self, list_of_bars: list[dict], replace_if_same_name: bool = True):
+    def add_loads(self, list_of_loads: list[dict]):
+    
+        '''
+        Adds or replaces one or more loads to the truss, and returns the new truss.
+        
+        #### Arguments
+        
+        `list_of_loads` (list[dict | tuple]): a description of the loads
+        to add, as one of the following:
+        1) a list of dicts of the form {"name": str, "joint_name": str, "x": float, "y": float}, or
+        2) a list of 4-tuples of the form (str, str, float, float) representing "name", "joint_name", "x", "y", or
+        3) a list of 3-tuples of the form (str, float, float) representing "joint_name", "x", "y".
 
-        """
-        Params to be specified:
-        name (str)
-        first_joint_name (str)
-        second_joint_name (str)
-        bar_params (dict)
-        """
+        The data types of each item in the list must be consistent (no mixing of the above).
 
-        curr_bar_names = self.get_all_objs(self.bars, str_names_only=True)
-        curr_joint_names = self.get_all_objs(self.joints, str_names_only=True)
+        #### Notes
 
-        for kwargs in list_of_bars:
-            bar_name = kwargs.get("name", None)
-            first_joint_name = kwargs.get("first_joint_name", None)
-            second_joint_name = kwargs.get("second_joint_name", None)
-            bar_params = kwargs.get("bar_params", None)
+        If load names are provided, the new joints will overwrite (replace) any existing joints
+        with the same name.
 
-            if all(
-                [
-                    s in curr_joint_names or s is None
-                    for s in (first_joint_name, second_joint_name)
-                ]
-            ):
-                if bar_name:
-                    if first_joint_name is None:
-                        if len(bar_name) == 2:
-                            first_joint_name = bar_name[0]
-                        else:
-                            raise ValueError(
-                                f"The bar {bar_name} was not given a first joint name, "
-                                "and it could not be inferred from its name."
-                            )
-                    if second_joint_name is None:
-                        if len(bar_name) == 2:
-                            second_joint_name = bar_name[1]
-                        else:
-                            raise ValueError(
-                                f"The bar {bar_name} was not given a second joint name, "
-                                "and it could not be inferred from its name."
-                            )
-                else:
-                    bar_name = f"{first_joint_name}{second_joint_name}"
-            else:
-                raise ValueError(
-                    f"The bar {bar_name} was requested connected to joints named "
-                    f"{first_joint_name} and {second_joint_name}, but the joint "
-                    f"{first_joint_name if (first_joint_name not in curr_joint_names) else second_joint_name} "
-                    f"does not exist in the truss. The available joint names are: {curr_joint_names}."
-                )
+        If input type 3) is chosen, the load name will be generated automatically as
+        `f'{joint_name}'`.
+        
+        #### Returns
+        
+        Truss: the truss with the loads attached, permitting a builder pattern usage.
+        
+        #### Raises
+        
+        `ValueError`: if a mixture of input types is given, or if the type is not one the above.
+        '''
 
-            new_bar_name = utils.convert_to_valid_var_name(
-                bar_name, self.bars, replace_if_same_name
-            )
+        _data_types = set([type(d) for d in list_of_loads])
+        _lengths = set([len(d) for d in list_of_loads])
 
-            if bar_name in curr_bar_names and not replace_if_same_name:
-                warnings.warn(
-                    f'The bar {kwargs.get("name")} was renamed to {bar_name}'
-                    f"because it already exists in the truss and `replace_if_same_name`"
-                    "was set to `False`."
-                )
+        if len(_data_types) != 1:
+            raise ValueError('All entries in `list_of_loads` must have '
+            f'the same type: either tuples or dicts. Got a mixture: {_data_types}.')
 
-            joint_1 = self.joints[first_joint_name]
-            joint_2 = self.joints[second_joint_name]
-            self.bars[new_bar_name] = Bar(
-                self, new_bar_name, joint_1, joint_2, bar_params
-            )
-            curr_bar_names.add(new_bar_name)
+        (_data_type, ) = _data_types
+        (_length, ) = _lengths
 
-        return self
-
-    def add_loads(self, list_of_loads: list[dict], replace_if_same_name: bool = True):
-
-        """
-        Params to be specified:
-        name (str)
-        joint_name (str)
-        x (float)
-        y (float)
-        """
-
-        curr_joint_names = self.get_all_objs(self.joints, str_names_only=True)
-        curr_load_names = self.get_all_objs(self.loads, str_names_only=True)
-
-        for kwargs in list_of_loads:
-            load_name = kwargs.get("name", None)
-            joint_name = kwargs.get("joint_name", None)
-            x, y = kwargs.get("x"), kwargs.get("y")  # required
-
-            if joint_name not in curr_joint_names:
-                raise ValueError(
-                    f"The load {load_name} was requested at a joint named "
-                    f"{joint_name} but a joint with this name does not exist in the truss. "
-                    f"The available joint names are: {curr_joint_names}."
-                )
-
-            new_load_name = utils.convert_to_valid_var_name(
-                load_name, self.loads, replace_if_same_name
-            )
-
-            if load_name in curr_load_names and not replace_if_same_name:
-                warnings.warn(
-                    f"The load {load_name} was renamed to {new_load_name} "
-                    f"because it already exists in the truss and `replace_if_same_name` "
-                    "was set to `False`."
-                )
-
-            joint_obj = self.joints[joint_name]
-            self.loads[new_load_name] = Load(new_load_name, joint_obj, x, y)
-            curr_load_names.add(new_load_name)
+        if _data_type is dict:
+            # Input type 1): expect input of the form {"name": str, "joint_name": str, "x": float, "y": float}
+            for item in list_of_loads:
+                name = item.get('name', None) or item.get('joint_name')
+                joint_name = item.get('joint_name', None) or item.get('name')
+                x, y = item.get('x'), item.get('y')
+                joint = self.joints[joint_name]
+                self.loads[name] = Load(name, joint, x, y)
+        
+        elif _data_type is tuple:
+            # Input type 2) or 3): expect input of the form (str[, str], float, float)
+            for item in list_of_loads:
+                name = item[0]
+                if isinstance(item[1], str) and len(item) == 4:
+                    # Input type 2): expect input of the form (str, str, float, float)
+                    joint_name = item[1]
+                    x, y = item[2:]
+                elif isinstance(item[1], (float, int)) and len(item) == 3:
+                    # Input type 3): expect input of the form (str, float, float)
+                    joint_name, x, y = item
+                    name = joint_name
+                joint = self.joints[joint_name]
+                self.loads[name] = Load(name, joint, x, y)
+        
+        else:
+            raise ValueError('The input `list_of_loads` must be one of the following: \n'
+            '1) a list of dicts of the form {"name": str, "joint_name": str, "x": float, "y": float}, or \n'
+            '2) a list of 4-tuples of the form (str, str, float, float) representing "name", "joint_name", "x", "y", or \n'
+            '3) a list of 3-tuples of the form (str, float, float) representing "joint_name", "x", "y".')
 
         return self
 
-    def add_supports(
-        self, list_of_supports: list[dict], replace_if_same_name: bool = True
-    ):
+        
+    def add_supports(self, list_of_supports: list[dict | tuple | str]):
 
-        """
-        Params to be specified:
-        name (str)
-        joint_name (str)
-        support_type (str)
-        pin_rotation (float)
-        """
+        '''
+        Adds or replaces one or more loads to the truss, and returns the new truss.
+        
+        #### Arguments
+        
+        `list_of_supports` (list[dict | tuple | str]): a description of the loads
+        to add, as one of the following:
+        1) a list of dicts of the form {"name": str, "joint_name": str, "support_type": str, "pin_rotation": float}, or
+        2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "name", "joint_name", "support_type", "pin_rotation", or
+        3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "joint_name", "support_type", "pin_rotation", or
+        4) TODO: a list of strings representing the joint_names only.
 
-        curr_support_names = self.get_all_objs(self.supports, str_names_only=True)
-        curr_joint_names = self.get_all_objs(self.joints, str_names_only=True)
+        The data types of each item in the list must be consistent (no mixing of the above).
 
-        for kwargs in list_of_supports:
+        #### Notes
 
-            support_name = kwargs.get("name", None)
-            joint_name = kwargs.get("joint_name", None)
-            support_type = kwargs.get("support_type", None)
-            pin_rotation = kwargs.get("pin_rotation", None)
+        If load names are provided, the new joints will overwrite (replace) any existing joints
+        with the same name.
 
-            if support_name is None and joint_name is not None:
-                joint_name = support_name
-            elif support_name is not None and joint_name is None:
-                support_name = joint_name
-            elif support_name is None and joint_name is None:
-                raise ValueError(
-                    "Neither a support name nor a joint at which it is located "
-                    "was given. At least one must be given, and the name of the other is inferred."
-                )
+        If input type 3) is chosen, the load name will be generated automatically as
+        `f'{joint_name}'`.
+        
+        #### Returns
+        
+        Truss: the truss with the loads attached, permitting a builder pattern usage.
+        
+        #### Raises
+        
+        `ValueError`: if a mixture of input types is given, or if the type is not one the above.
+        '''
 
-            if joint_name not in curr_joint_names:
-                raise ValueError(
-                    f"The support {support_name} was requested at a joint named "
-                    f"{joint_name} but a joint with this name does not exist in the truss. "
-                    f"The available joint names are: {curr_joint_names}."
-                )
+        _data_types = set([type(d) for d in list_of_supports])
 
-            pin_rotation = pin_rotation or 0
-            support_type = support_type or "pin"
+        if len(_data_types) != 1:
+            raise ValueError('All entries in `list_of_loads` must have '
+            f'the same type: either tuples or dicts. Got a mixture: {_data_types}.')
 
-            new_support_name = utils.convert_to_valid_var_name(
-                support_name, self.supports, replace_if_same_name
-            )
+        (_data_type, ) = _data_types
 
-            if support_name in curr_support_names and not replace_if_same_name:
-                warnings.warn(
-                    f"The support {support_name} was renamed to {new_support_name} "
-                    f"because it already exists in the truss and `replace_if_same_name` "
-                    "was set to `False`."
-                )
+        if _data_type is dict:
+            # Input type 1): expect input of the form {"name": str, "joint_name": str, "support_type": str, "pin_rotation": float}
+            for item in list_of_supports:
+                name = item.get('name', None) or item.get('joint_name')
+                joint_name = item.get('joint_name', None) or item.get('name')
+                support_type = item.get('support_type', 'pin')
+                pin_rotation = item.get('pin_rotation', 0)
+                joint = self.joints[joint_name]
+                self.supports[name] = Support(name, joint, support_type, pin_rotation)
+            
+        elif _data_type is tuple:
+            # Input type 2) or 3): expect input of the form (str, str[, str[, float]])
+            for item in list_of_supports:
+                sub_types = tuple([type(d) for d in item])
+                if sub_types[:3] == (str, str, str):
+                    # Input type 2): expect input of the form (str, str, str[, float])
+                    name, joint_name, support_type = item[:3]
+                    pin_rotation = item[3] if len(item) > 3 else 0
+                    joint = self.joints[joint_name]
+                    self.supports[name] = Support(name, joint, support_type, pin_rotation)
+                elif sub_types[:2] == (str, str):
+                    # Input type 3): expect input of the form (str, str[, float])
+                    joint_name, support_type = item[:2]
+                    name = joint_name
+                    pin_rotation = item[2] if len(item) > 2 else 0
+                    joint = self.joints[joint_name]
+                    self.supports[name] = Support(name, joint, support_type, pin_rotation)
 
-            joint_obj = self.joints[joint_name]
-            self.supports[new_support_name] = Support(
-                new_support_name, joint_obj, support_type, pin_rotation
-            )
-            curr_support_names.add(new_support_name)
+        elif _data_type is str:
+            # TODO: Input type 4): input gives joint names,
+            # need to auto select joint type to make statically determinate.
+            # Assume zero pin rotation.
+            # Use pin joint unless this goes over b + F > 2j then use roller.
+            raise NotImplementedError()
+
+        else:
+            raise ValueError('The input `list_of_loads` must be one of the following: \n'
+            '1) a list of dicts of the form {"name": str, "joint_name": str, "support_type": str, "pin_rotation": float}, or \n'
+            '2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "name", "joint_name", "support_type", "pin_rotation", or \n'
+            '3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "joint_name", "support_type", "pin_rotation".')
+        
+        return self
+
 
     # TRUSS METHODS
 
@@ -787,8 +933,6 @@ class Truss:
             )
 
         # Map solution back to each object name
-
-        print(wanted_vars)
 
         output_dict = {}
         for i, (var_name, val) in enumerate(zip(wanted_vars, x)):
@@ -1182,6 +1326,7 @@ def plot_diagram(truss: Truss, results: Result,
 
         # draw a icon-like symbol representing the type of support
         # TODO: maybe make this into a matplotlib patch to use it in the legend
+
         utils.draw_support(
             support.joint.x,
             support.joint.y,
@@ -1213,7 +1358,7 @@ def plot_diagram(truss: Truss, results: Result,
             load.joint.y + LEN / 3 * math.sin(label_angle),
             f'{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units.split(",")[0]}',
             va="center",
-            ha="left" if -90 < math.degrees(label_angle) <= 90 else "right",
+            ha="left" if -math.pi/2 < label_angle <= math.pi/2 else "right",
         )
 
     # Graphical improvements
@@ -1289,7 +1434,6 @@ def load_truss_from_json(
                 ),
             )
 
-            print(truss_results)
             plot_diagram(
                 truss,
                 truss_results,

@@ -38,7 +38,7 @@ def test_build_standard():
 
     truss.add_supports([
         {'name': 'A', 'joint_name': 'A', 'support_type': 'encastre'},
-        {'name': 'E', 'joint_name': 'E', 'support_type': 'pin', 'pin_rotation': -math.pi / 2}
+        {'name': 'E', 'joint_name': 'E', 'support_type': 'pin', 'pin_rotation': -math.pi/2}
     ])
 
     results = Result(truss, solution_method=utils.SolveMethod.NUMPY_STD)
@@ -46,5 +46,26 @@ def test_build_standard():
     plot_diagram(truss, results, full_screen=False, show_reactions=True)
 
 
+def test_build_very_lazy():
+    t = init_truss(units='kN, mm')
+    t.add_joints([
+        (0, 0), (290, -90), (815, 127.5), (290, 345), (0, 255), (220.836, 127.5)
+    ])
+
+    t.add_bars(('AB', 'BC', 'CD', 'DE', 'EF', 'AF', 'DF', 'BF'))
+
+    t.add_loads([
+        ('C', 0, -0.675 * 1)
+    ])
+
+    t.add_supports([
+        ('A', 'encastre'), ('E', 'pin', -math.pi/2)
+    ])
+
+    results = Result(t)
+
+    plot_diagram(t, results, False)
+
+
 if __name__ == '__main__':
-    test_build_standard()
+    test_build_very_lazy()

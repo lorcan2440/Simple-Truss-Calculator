@@ -1,0 +1,174 @@
+{
+    "truss": {
+        "name": "My Truss",
+        "default_bar_params": {
+            "b": 0.016,
+            "t": 0.004,
+            "D": 0.02,
+            "E": 210000000000.0,
+            "strength_max": 3000000000.0
+        },
+        "units": "kN, mm"
+    },
+    "joints": [
+        {
+            "name": "A",
+            "x": 0,
+            "y": 0
+        },
+        {
+            "name": "B",
+            "x": 290,
+            "y": -90
+        },
+        {
+            "name": "C",
+            "x": 815,
+            "y": 127.5
+        },
+        {
+            "name": "D",
+            "x": 290,
+            "y": 345
+        },
+        {
+            "name": "E",
+            "x": 0,
+            "y": 255
+        },
+        {
+            "name": "F",
+            "x": 220.836,
+            "y": 127.5
+        }
+    ],
+    "bars": [
+        {
+            "name": "AB",
+            "first_joint_name": "A",
+            "second_joint_name": "B",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "BC",
+            "first_joint_name": "B",
+            "second_joint_name": "C",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "CD",
+            "first_joint_name": "C",
+            "second_joint_name": "D",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "DE",
+            "first_joint_name": "D",
+            "second_joint_name": "E",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "EF",
+            "first_joint_name": "E",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "AF",
+            "first_joint_name": "A",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "DF",
+            "first_joint_name": "D",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        },
+        {
+            "name": "BF",
+            "first_joint_name": "B",
+            "second_joint_name": "F",
+            "bar_params": {
+                "b": 0.016,
+                "t": 0.004,
+                "D": 0.02,
+                "E": 210000000000.0,
+                "strength_max": 3000000000.0
+            }
+        }
+    ],
+    "loads": [
+        {
+            "name": "C",
+            "joint_name": "C",
+            "x": 0,
+            "y": -0.675
+        }
+    ],
+    "supports": [
+        {
+            "name": "A",
+            "joint_name": "A",
+            "support_type": "encastre",
+            "roller_normal": [
+                6.123233995736766e-17,
+                1.0
+            ],
+            "pin_rotation": 0
+        },
+        {
+            "name": "E",
+            "joint_name": "E",
+            "support_type": "pin",
+            "roller_normal": [
+                1.0,
+                0.0
+            ],
+            "pin_rotation": -1.5707963267948966
+        }
+    ],
+    "results": null
+}

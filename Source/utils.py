@@ -50,9 +50,10 @@ class Unit(Enum):
     }
 
 
-def iter_all_strings():
+def iter_all_strings(start: int = 0):
     for size in itertools.count(1):
-        for s in itertools.product(string.ascii_uppercase, repeat=size):
+        for s in itertools.islice(
+                itertools.product(string.ascii_uppercase, repeat=size), start, None):
             yield "".join(s)
 
 
@@ -191,7 +192,7 @@ def draw_support(x: float, y: float, size: float, support_type: str = 'pin', pin
             a = math.pi / 2 - math.atan2(*reversed(roller_normal))
 
         elif support_type == 'pin':
-            a = math.radians(pin_rotation)
+            a = -1 * pin_rotation
 
         else:
             raise TypeError(f'''
