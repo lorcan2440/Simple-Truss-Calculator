@@ -243,8 +243,8 @@ class Result:
 
         # set the truss's results before rounding but after zeroing small numbers
         self.truss.results = {
-            "internal_forces": self.tensions.copy(),
-            "reaction_forces": self.reactions.copy(),
+            "tensions": self.tensions.copy(),
+            "reactions": self.reactions.copy(),
             "stresses": self.stresses.copy(),
             "strains": self.strains.copy(),
             "buckling_ratios": self.buckling_ratios.copy(),
@@ -266,7 +266,7 @@ class Result:
         repr_str += f"\n Buckling ratios are: \n \t {str(self.buckling_ratios)}"
         repr_str += f"\n Strains are: \n \t {str(self.strains)}"
         repr_str += (
-            f'\n\n Units are {self.truss.units.split(",")[0]}, values '
+            f"\n\n Units are {self.truss.units[0].value}, values "
             f'{f"not rounded" if self.sig_figs is None else f"rounded to {self.sig_figs} s.f."}'
         )
         return repr_str
@@ -396,13 +396,20 @@ class Truss:
         `ValueError`: _description_
         """
 
-        self.name = kwargs.get("name")
-        self.units = kwargs.get("units")
+        self.name = kwargs.get("name", "My Truss")
+        self.units = kwargs.get(
+            "units", (utils.Unit.KILONEWTONS, utils.Unit.MILLIMETRES)
+        )
 
         self.joints = dict()
         self.bars = dict()
         self.loads = dict()
         self.supports = dict()
+
+        if isinstance(self.units, str):
+            force_unit = utils.Unit(self.units.split()[0].strip())
+            length_unit = utils.Unit(self.units.split()[1].strip())
+            self.units = (force_unit, length_unit)
 
         if kwargs.get("bar_params", None) is None:
             # some default values. symbols defined on databook pg. 8
@@ -1096,7 +1103,7 @@ class Truss:
                     "E": self.default_params.get("E"),
                     "strength_max": self.default_params.get("strength_max"),
                 },
-                "units": self.units,
+                "units": [self.units[0].value, self.units[1].value],
             },
             "joints": [
                 {"name": j.name, "x": j.x, "y": j.y}
@@ -1139,8 +1146,8 @@ class Truss:
                 for s in self.get_all_objs(self.supports)
             ],
             "results": {
-                "internal_forces": self.results.get("internal_forces"),
-                "reaction_forces": self.results.get("reaction_forces"),
+                "tensions": self.results.get("tensions"),
+                "reactions": self.results.get("reactions"),
                 "stresses": self.results.get("stresses"),
                 "strains": self.results.get("strains"),
                 "buckling_ratios": self.results.get("buckling_ratios"),
@@ -1298,6 +1305,8 @@ def plot_diagram(
         ),
     )
 
+    plt.cla()
+
     plt.plot(_xjl, _yjl, "o", color="black", markersize=5)
     plt.plot(
         _xjl, _yjl, "o", color="white", markersize=3.5
@@ -1317,7 +1326,7 @@ def plot_diagram(
             + ": "
             + str(results.tensions[bar.name])
             + " "
-            + truss.units.split(",")[0],
+            + truss.units[0].value,
             zorder=0,
         )
 
@@ -1345,7 +1354,7 @@ def plot_diagram(
             + ": "
             + str(results.reactions[support.name])
             + " "
-            + truss.units.split(",")[0],  # noqa \
+            + truss.units[0].value,  # noqa \
         )
 
     for support in truss.get_all_objs(truss.supports):
@@ -1376,7 +1385,7 @@ def plot_diagram(
             support.name,
             va="center",
             ha="left" if -90 < math.degrees(label_angle) <= 90 else "right",
-            label=f'{support.name}: {str(results.reactions[support.name])} {truss.units.split(",")[0]}',
+            label=f"{support.name}: {str(results.reactions[support.name])} {truss.units[0].value}",
         )
 
         # draw a icon-like symbol representing the type of support
@@ -1411,7 +1420,7 @@ def plot_diagram(
         plt.text(
             load.joint.x + LEN / 3 * math.cos(label_angle),
             load.joint.y + LEN / 3 * math.sin(label_angle),
-            f'{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units.split(",")[0]}',
+            f"{load.name}: ({str(load.x)}, {str(load.y)}) {truss.units[0].value}",
             va="center",
             ha="left" if -math.pi / 2 < label_angle <= math.pi / 2 else "right",
         )
@@ -1419,13 +1428,13 @@ def plot_diagram(
     # Graphical improvements
     AXES_COLOUR = "#BBBBBB"  # light grey
 
+    plt.style.use("./proplot_style.mplstyle")
     plt.title(truss.name)
     plt.legend(loc="upper right")
     plt.autoscale()
     plt.axis("equal")
-    plt.xlabel(f'$x$-position / {truss.units.split(",")[1]}')
-    plt.ylabel(f'$y$-position / {truss.units.split(",")[1]}')
-    plt.style.use("./proplot_style.mplstyle")
+    plt.xlabel(f"$x$-position / {truss.units[1].value}")
+    plt.ylabel(f"$y$-position / {truss.units[1].value}")
 
     ax = plt.gca()
     spines = ax.spines
@@ -1433,10 +1442,8 @@ def plot_diagram(
     spines["top"].set_visible(False)
     spines["left"].set_color(AXES_COLOUR)  # axis lines
     spines["bottom"].set_color(AXES_COLOUR)
-    ax.tick_params(
-        axis="x", colors=AXES_COLOUR, grid_alpha=0.5
-    )  # axis ticks and their number labels
-    ax.tick_params(axis="y", colors=AXES_COLOUR, grid_alpha=0.5)
+    ax.tick_params(axis="x", which="both", colors=AXES_COLOUR, grid_alpha=0.5)
+    ax.tick_params(axis="y", which="both", colors=AXES_COLOUR, grid_alpha=0.5)
     ax.xaxis.label.set_color(AXES_COLOUR)  # axis name labels
     ax.yaxis.label.set_color(AXES_COLOUR)
 
@@ -1445,9 +1452,13 @@ def plot_diagram(
 
     plt.show()
 
+    # HACK: if this is not included, subsequent plots will not inherit some of the
+    # stylesheet properties for some reason.
+    plt.style.use("default")
+
 
 def load_truss_from_json(
-    file: str, show_if_results: bool = True, _delete_truss_after: Optional[bool] = False
+    file: str, show_if_results: bool = True, full_screen: bool = True
 ) -> Truss:
 
     """
@@ -1455,15 +1466,15 @@ def load_truss_from_json(
     If the results are available, they can be showed.
     """
 
-    import json
-
     with open(file) as json_file:
 
         f = json.load(json_file)
 
         t_attr = f["truss"]
         truss = init_truss(
-            t_attr["name"], t_attr["default_bar_params"], t_attr["units"]
+            t_attr["name"],
+            t_attr["default_bar_params"],
+            (utils.Unit(t_attr["units"][0]), utils.Unit(t_attr["units"][1])),
         )
 
         truss.add_joints(f["joints"])
@@ -1481,8 +1492,8 @@ def load_truss_from_json(
                 sig_figs=3,
                 solution_method=None,
                 _override_res=(
-                    {bn: res["internal_forces"][bn] for bn in bar_names},
-                    {sn: res["reaction_forces"][sn] for sn in support_names},
+                    {bn: res["tensions"][bn] for bn in bar_names},
+                    {sn: res["reactions"][sn] for sn in support_names},
                     {bn: res["stresses"][bn] for bn in bar_names},
                     {bn: res["strains"][bn] for bn in bar_names},
                     {bn: res["buckling_ratios"][bn] for bn in bar_names},
@@ -1490,10 +1501,7 @@ def load_truss_from_json(
             )
 
             plot_diagram(
-                truss,
-                truss_results,
-                show_reactions=True,
-                _delete_truss_after=_delete_truss_after,
+                truss, truss_results, full_screen=full_screen, show_reactions=True
             )
 
         return truss

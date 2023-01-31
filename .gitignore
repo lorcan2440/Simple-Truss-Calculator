@@ -1,9 +1,8 @@
 .pytest_cache
 .git
 .spec
-
-Build/build/
-Build/dist/
+htmlcov
 _extensions/
-
+.coverage
+tasks.sh
 **/__pycache__/

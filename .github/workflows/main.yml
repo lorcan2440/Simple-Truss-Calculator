@@ -29,10 +29,10 @@ jobs:
           pip install black flake8 pytest pytest-cov
       
       - name: Run unit tests with pytest
-        run: pytest -v --cov
+        run: pytest -v --cov --cov-report html
 
       - name: Format with black
-        run: black Source/truss.py
+        run: black Source
 
       - name: Lint with flake8
         run: flake8 --statistics

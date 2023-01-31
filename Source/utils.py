@@ -11,9 +11,10 @@ from enum import Enum, auto, unique
 
 
 #  Fix issue with warning appearing when run from .exe
-if os.path.basename(__file__).endswith('.exe'):
-    warnings.filterwarnings("ignore", "(?s).*MATPLOTLIBDATA.*",
-                            category=UserWarning)  # deprecation warning inherits from UserWarning
+if os.path.basename(__file__).endswith(".exe"):
+    warnings.filterwarnings(
+        "ignore", "(?s).*MATPLOTLIBDATA.*", category=UserWarning
+    )  # deprecation warning inherits from UserWarning
 
 
 @unique
@@ -45,15 +46,21 @@ class Unit(Enum):
     # conversion lookup table, all units are converted to metric N-m-Pa internally.
     # value in N-m-Pa = value given * _CONV[unit given]
     _CONV = {
-        NEWTONS: 1, KILONEWTONS: 1e3, POUND_FORCE: 0.224809,
-        METRES: 1, CENTIMETRES: 1e-2, MILLIMETRES: 1e-3, INCHES: 0.0254,
+        NEWTONS: 1,
+        KILONEWTONS: 1e3,
+        POUND_FORCE: 0.224809,
+        METRES: 1,
+        CENTIMETRES: 1e-2,
+        MILLIMETRES: 1e-3,
+        INCHES: 0.0254,
     }
 
 
 def iter_all_strings(start: int = 0):
     for size in itertools.count(1):
         for s in itertools.islice(
-                itertools.product(string.ascii_uppercase, repeat=size), start, None):
+            itertools.product(string.ascii_uppercase, repeat=size), start, None
+        ):
             yield "".join(s)
 
 
@@ -66,24 +73,26 @@ def convert_to_valid_var_name(name: str, cls: object, allow_existing_vars=True) 
     to make it distinct, e.g. "my_first_truss_2", "my_first_truss_3", etc.
     """
 
-    if name in {'', None}:
-        name = ''
+    if name in {"", None}:
+        name = ""
 
     # remove trailing whitespace, convert to lowercase and replace spaces with underscores
-    new_name = name.strip().upper().replace(' ', '_')
+    new_name = name.strip().upper().replace(" ", "_")
 
     # remove non-alphanumeric characters except underscores
-    pattern = re.compile(r'[\W]+', re.UNICODE)
-    new_name = pattern.sub('', new_name)
+    pattern = re.compile(r"[\W]+", re.UNICODE)
+    new_name = pattern.sub("", new_name)
 
     if not allow_existing_vars:
-        if new_name == '':  # if given name is blank, iterate through alphabet
+        if new_name == "":  # if given name is blank, iterate through alphabet
             for s in iter_all_strings():
                 if s not in cls.keys():
                     new_name = s
-        elif not allow_existing_vars and new_name in cls.keys():  # if not, add _number to end
+        elif (
+            not allow_existing_vars and new_name in cls.keys()
+        ):  # if not, add _number to end
             suffix = 2
-            while (new_name + '_' + str(suffix)) in cls.keys():
+            while (new_name + "_" + str(suffix)) in cls.keys():
                 suffix += 1
 
     return new_name
@@ -97,8 +106,14 @@ def get_constants(cls: type) -> dict[str, Hashable]:
     """
 
     # get a list of the names of the constants
-    names = list(filter(
-        lambda a: not callable(getattr(cls(), a)) and not a.startswith('_') and a == a.upper(), dir(cls())))
+    names = list(
+        filter(
+            lambda a: not callable(getattr(cls(), a))
+            and not a.startswith("_")
+            and a == a.upper(),
+            dir(cls()),
+        )
+    )
 
     # get a list of the values of these constants
     vals = [getattr(cls(), a) for a in names]
@@ -118,22 +133,28 @@ def set_matplotlib_fullscreen() -> None:
 
     backend = str(plt.get_backend())
     mgr = plt.get_current_fig_manager()
-    if backend == 'TkAgg':  # used if PyQt5 is not installed
-        if os.name == 'nt':
-            mgr.window.state('zoomed')
+    if backend == "TkAgg":  # used if PyQt5 is not installed
+        if os.name == "nt":
+            mgr.window.state("zoomed")
         else:
             mgr.resize(*mgr.window.maxsize())
-    elif backend == 'wxAgg':
+    elif backend == "wxAgg":
         mgr.frame.Maximize(True)
-    elif backend in ['Qt4Agg', 'Qt5Agg', 'QtAgg']:  # used if PyQt5 is installed
+    elif backend in ["Qt4Agg", "Qt5Agg", "QtAgg"]:  # used if PyQt5 is installed
         mgr.window.showMaximized()
     else:
-        raise RuntimeWarning(f'The backend in use, {backend}, is not supported in fullscreen mode.')
+        raise RuntimeWarning(
+            f"The backend in use, {backend}, is not supported in fullscreen mode."
+        )
 
 
-def find_free_space_around_joint(joint: object, results: object = None,
-                                 truss: Optional[object] = None, show_reactions: bool = True,
-                                 as_degrees: bool = False) -> float:
+def find_free_space_around_joint(
+    joint: object,
+    results: object = None,
+    truss: Optional[object] = None,
+    show_reactions: bool = True,
+    as_degrees: bool = False,
+) -> float:
 
     """
     Helper function to find a place to label text around a joint. Finds a location
@@ -144,8 +165,10 @@ def find_free_space_around_joint(joint: object, results: object = None,
     support = truss.get_support_by_joint(joint)
 
     # find the angles occupied due to bars being there
-    used_angles = [bar.get_direction(origin_joint=joint)
-        for bar in truss.get_all_bars_connected_to_joint(joint)]
+    used_angles = [
+        bar.get_direction(origin_joint=joint)
+        for bar in truss.get_all_bars_connected_to_joint(joint)
+    ]
 
     # find the angles occupied due to load arrows being there
     used_angles += [load.direction for load in truss.get_all_loads_at_joint(joint)]
@@ -154,19 +177,22 @@ def find_free_space_around_joint(joint: object, results: object = None,
     # TODO: don't add if the reaction force is zero
     if support is not None:
         if show_reactions:
-            if support.support_type == 'roller':
+            if support.support_type == "roller":
                 used_angles.append(math.pi + support.reaction_direction)
             used_angles.append(math.atan2(*reversed(results.reactions[support.name])))
 
         else:
-            if support.support_type == 'pin':
+            if support.support_type == "pin":
                 used_angles.append(math.pi / 2 - support.pin_rotation)
 
     # sort ascending from 0 to 360 (through 2 * pi)
     used_angles = sorted([i % (2 * math.pi) for i in used_angles])
 
     # find the angular sizes of the gaps
-    differences = [(used_angles[i] - used_angles[i - 1]) % (2 * math.pi) for i in range(len(used_angles))]
+    differences = [
+        (used_angles[i] - used_angles[i - 1]) % (2 * math.pi)
+        for i in range(len(used_angles))
+    ]
 
     # determine at what angle is the most free
     max_i = differences.index(max(differences))
@@ -177,8 +203,25 @@ def find_free_space_around_joint(joint: object, results: object = None,
     return math.degrees(most_free_angle) if as_degrees else most_free_angle
 
 
-def draw_support(x: float, y: float, size: float, support_type: str = 'pin', pin_rotation: float = 0,
-                 roller_normal: np.array = None) -> None:
+def rotate_coords(p: tuple[float], x: float, y: float, a: float) -> tuple[float]:
+    """
+    Rotate a coordinate `p = (_x, _y)` about a centre `(x, y)` by `a` radians counterclockwise.
+    """
+
+    return (
+        x + (p[0] - x) * math.cos(a) + (p[1] - y) * math.sin(a),
+        y - (p[0] - x) * math.sin(a) + (p[1] - y) * math.cos(a),
+    )
+
+
+def draw_support(
+    x: float,
+    y: float,
+    size: float,
+    support_type: str = "pin",
+    pin_rotation: float = 0,
+    roller_normal: np.array = None,
+) -> None:
 
     """
     Draw a particular type of support, using the standard conventional symbols, on
@@ -188,118 +231,201 @@ def draw_support(x: float, y: float, size: float, support_type: str = 'pin', pin
 
     # Helper function to rotate the drawing
     if pin_rotation != 0:  # either but not both: cannot be encastre
-        if support_type == 'roller':
+        if support_type == "roller":
             a = math.pi / 2 - math.atan2(*reversed(roller_normal))
 
-        elif support_type == 'pin':
+        elif support_type == "pin":
             a = -1 * pin_rotation
 
         else:
-            raise TypeError(f'''
+            raise TypeError(
+                f"""
             'The combination of supplied information: support type ({support_type}), pin rotation angle'
-            '({pin_rotation}) and roller direction ({roller_normal}) is invalid.''')
+            '({pin_rotation}) and roller direction ({roller_normal}) is invalid."""
+            )
 
-        # function for rotating a given coordinate tuple _p = (_x, _y) by a radians clockwise about (x, y)
-        rot = lambda _p: (x + (_p[0] - x) * math.cos(a) + (_p[1] - y) * math.sin(a),  # noqa
-                        y - (_p[0] - x) * math.sin(a) + (_p[1] - y) * math.cos(a))
+        # function for rotating a given coordinate
+        rot = lambda _p: rotate_coords(_p, x, y, a)  # noqa
 
-    if support_type == 'encastre':
+    if support_type == "encastre":
 
         # Encastre symbol: solid line and hashed lines representing ground
-        plt.plot((x - size / 2, x + size / 2), (y, y),                              # horizontal line
-                 linewidth=1, color='black', zorder=0)
+        plt.plot(
+            (x - size / 2, x + size / 2),
+            (y, y),  # horizontal line
+            linewidth=1,
+            color="black",
+            zorder=0,
+        )
         for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
-            plt.plot((x_pos, x_pos - size / 5), (y, y - size / 5),                  # hashed lines
-                     linewidth=1, color='black', zorder=0)
+            plt.plot(
+                (x_pos, x_pos - size / 5),
+                (y, y - size / 5),  # hashed lines
+                linewidth=1,
+                color="black",
+                zorder=0,
+            )
 
-    if (support_type == 'pin' and pin_rotation != 0) or support_type == 'roller':
+    if (support_type == "pin" and pin_rotation != 0) or support_type == "roller":
         # NOTE: element indices are
         # 0: triangle top left, 1: triangle bottom left, 2: triangle bottom right, 3: triangle top right
         # 4,5,6,7,8: ground top right diagonal points, 9,10,11,12,13: ground bottom left diagonal points
         # 14: ground left point, 15: ground right point
-        _old_pts = [
-            (x - size / 20, y - math.sqrt(3) * size / 20),
-            (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-            (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
-            (x + size / 20, y - math.sqrt(3) * size / 20)
-        ] + [(x_pos, y - (size / 3 if support_type == 'pin' else 8 / 15 * size))
-            for x_pos, y_pos in zip(list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-        ] + [(x_pos - size / 5, y - (8/15 * size if support_type == 'pin' else 11/15 * size))  # noqa \     
-            for x_pos, y_pos in zip(list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5)
-        ] + [(x - size / 2, y - (size / 3 if support_type == 'pin' else 8 / 15 * size)),  # noqa
-             (x + size / 2, y - (size / 3 if support_type == 'pin' else 8 / 15 * size))]
+        _old_pts = (
+            [
+                (x - size / 20, y - math.sqrt(3) * size / 20),
+                (x - (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+                (x + (1 / (3 * math.sqrt(3))) * size, y - size / 3),
+                (x + size / 20, y - math.sqrt(3) * size / 20),
+            ]
+            + [
+                (x_pos, y - (size / 3 if support_type == "pin" else 8 / 15 * size))
+                for x_pos, y_pos in zip(
+                    list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5
+                )
+            ]
+            + [
+                (
+                    x_pos - size / 5,
+                    y - (8 / 15 * size if support_type == "pin" else 11 / 15 * size),
+                )  # noqa \
+                for x_pos, y_pos in zip(
+                    list(np.linspace(x - 0.3 * size, x + 0.5 * size, 5)), [y] * 5
+                )
+            ]
+            + [
+                (
+                    x - size / 2,
+                    y - (size / 3 if support_type == "pin" else 8 / 15 * size),
+                ),  # noqa
+                (
+                    x + size / 2,
+                    y - (size / 3 if support_type == "pin" else 8 / 15 * size),
+                ),
+            ]
+        )
 
-    if support_type == 'pin':
+    if support_type == "pin":
         if pin_rotation == 0:
             # Pin symbol: triangle resting on ground
-            plt.plot((x - size / 20, x - (1 / (3 * math.sqrt(3))) * size,               # equilateral triangle
-                    x + (1 / (3 * math.sqrt(3))) * size, x + size / 20),
-                    (y - math.sqrt(3) * size / 20, y - size / 3,
-                    y - size / 3, y - math.sqrt(3) * size / 20),
-                    linewidth=1, color='black', zorder=0)
+            plt.plot(
+                (
+                    x - size / 20,
+                    x - (1 / (3 * math.sqrt(3))) * size,  # equilateral triangle
+                    x + (1 / (3 * math.sqrt(3))) * size,
+                    x + size / 20,
+                ),
+                (
+                    y - math.sqrt(3) * size / 20,
+                    y - size / 3,
+                    y - size / 3,
+                    y - math.sqrt(3) * size / 20,
+                ),
+                linewidth=1,
+                color="black",
+                zorder=0,
+            )
 
-            plt.gca().add_patch(                                                        # circle pin
-                plt.Circle((x, y), size / 10, color='black', linewidth=1, zorder=1))
+            plt.gca().add_patch(  # circle pin
+                plt.Circle((x, y), size / 10, color="black", linewidth=1, zorder=1)
+            )
             plt.gca().add_patch(
-                plt.Circle((x, y), size / 14, color='white', linewidth=1, zorder=1))
+                plt.Circle((x, y), size / 14, color="white", linewidth=1, zorder=1)
+            )
 
-            plt.plot((x - size / 2, x + size / 2), (y - size / 3, y - size / 3),        # ground
-                    linewidth=1, color='black', zorder=0)
+            plt.plot(
+                (x - size / 2, x + size / 2),
+                (y - size / 3, y - size / 3),  # ground
+                linewidth=1,
+                color="black",
+                zorder=0,
+            )
             for x_pos in np.linspace(x - 0.3 * size, x + 0.5 * size, 5):
-                plt.plot((x_pos, x_pos - size / 5), (y - size / 3, y - 8 / 15 * size),
-                        linewidth=1, color='black', zorder=0)
+                plt.plot(
+                    (x_pos, x_pos - size / 5),
+                    (y - size / 3, y - 8 / 15 * size),
+                    linewidth=1,
+                    color="black",
+                    zorder=0,
+                )
         else:
             # Transform the important points to be plotted
             _new_pts = list(map(rot, _old_pts))
             xtl, ytl = map(list, zip(*_new_pts))
 
-            plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
+            plt.plot(
+                xtl[0:4], ytl[0:4], linewidth=1, color="black", zorder=0
+            )  # triangle
 
-            plt.gca().add_patch(                                                        # circle pin
-                plt.Circle((x, y), size / 10, linewidth=1, zorder=1,
-                        color='black'))
+            plt.gca().add_patch(  # circle pin
+                plt.Circle((x, y), size / 10, linewidth=1, zorder=1, color="black")
+            )
             plt.gca().add_patch(
-                plt.Circle((x, y), size / 14, linewidth=1, zorder=1,
-                        color='white'))
+                plt.Circle((x, y), size / 14, linewidth=1, zorder=1, color="white")
+            )
 
-            plt.plot(xtl[14:], ytl[14:], linewidth=1, color='black', zorder=0)          # ground
+            plt.plot(xtl[14:], ytl[14:], linewidth=1, color="black", zorder=0)  # ground
             for i, (x_tr, y_tr) in enumerate(_new_pts[4:9]):
                 n = i + 4
-                plt.plot([x_tr, _new_pts[n + 5][0]], [y_tr, _new_pts[n + 5][1]],
-                    linewidth=1, color='black', zorder=0)
+                plt.plot(
+                    [x_tr, _new_pts[n + 5][0]],
+                    [y_tr, _new_pts[n + 5][1]],
+                    linewidth=1,
+                    color="black",
+                    zorder=0,
+                )
 
-    if support_type == 'roller':
+    if support_type == "roller":
         # Roller symbol: pin with wheels, rotated about pin circle to show direction
         # Transform the important points to be plotted
         # NOTE: element indices are (0-15 unchanged) from pin
         # 16: wheel left centre point, 17: wheel right centre point
 
-        _old_pts += [(x - (0.7 / (3 * math.sqrt(3))) * size, y - 13 / 30 * size),
-            (x + (0.7 / (3 * math.sqrt(3))) * size, y - 13 / 30 * size)]
+        _old_pts += [
+            (x - (0.7 / (3 * math.sqrt(3))) * size, y - 13 / 30 * size),
+            (x + (0.7 / (3 * math.sqrt(3))) * size, y - 13 / 30 * size),
+        ]
 
         _new_pts = list(map(rot, _old_pts))
         xtl, ytl = map(list, zip(*_new_pts))
 
-        plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color='black', zorder=0)          # triangle
+        plt.plot(xtl[0:4], ytl[0:4], linewidth=1, color="black", zorder=0)  # triangle
 
-        plt.gca().add_patch(                                                        # circle pin
-            plt.Circle((x, y), size / 10, linewidth=1, zorder=1,
-                       color='black'))
+        plt.gca().add_patch(  # circle pin
+            plt.Circle((x, y), size / 10, linewidth=1, zorder=1, color="black")
+        )
         plt.gca().add_patch(
-            plt.Circle((x, y), size / 14, linewidth=1, zorder=1,
-                       color='white'))
+            plt.Circle((x, y), size / 14, linewidth=1, zorder=1, color="white")
+        )
 
-        plt.plot(xtl[14:16], ytl[14:16], linewidth=1, color='black', zorder=0)      # ground
+        plt.plot(xtl[14:16], ytl[14:16], linewidth=1, color="black", zorder=0)  # ground
         for i, (x_tr, y_tr) in enumerate(_new_pts[4:9]):
             n = i + 4
-            plt.plot([x_tr, _new_pts[n + 5][0]], [y_tr, _new_pts[n + 5][1]],
-                linewidth=1, color='black', zorder=0)
+            plt.plot(
+                [x_tr, _new_pts[n + 5][0]],
+                [y_tr, _new_pts[n + 5][1]],
+                linewidth=1,
+                color="black",
+                zorder=0,
+            )
 
-        plt.gca().add_patch(                                                        # wheels
-            plt.Circle((xtl[16], ytl[16]), size / 10, color='black', linewidth=1, zorder=1))
+        plt.gca().add_patch(  # wheels
+            plt.Circle(
+                (xtl[16], ytl[16]), size / 10, color="black", linewidth=1, zorder=1
+            )
+        )
         plt.gca().add_patch(
-            plt.Circle((xtl[16], ytl[16]), size / 14, color='white', linewidth=1, zorder=1))
+            plt.Circle(
+                (xtl[16], ytl[16]), size / 14, color="white", linewidth=1, zorder=1
+            )
+        )
         plt.gca().add_patch(
-            plt.Circle((xtl[17], ytl[17]), size / 10, color='black', linewidth=1, zorder=1))
+            plt.Circle(
+                (xtl[17], ytl[17]), size / 10, color="black", linewidth=1, zorder=1
+            )
+        )
         plt.gca().add_patch(
-            plt.Circle((xtl[17], ytl[17]), size / 14, color='white', linewidth=1, zorder=1))
+            plt.Circle(
+                (xtl[17], ytl[17]), size / 14, color="white", linewidth=1, zorder=1
+            )
+        )
