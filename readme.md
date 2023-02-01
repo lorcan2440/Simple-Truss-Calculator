@@ -4,9 +4,9 @@
 
 Calculator with display for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss.
 
-100% Python; intended for personal use only but documented as a module.
-Soon I hope to make it more user-friendly and interactive.
-See `Source/Truss_Calculator.py` for the program.
+100% Python.
+
+See `Source/truss.py` for the program.
 
 Assumes linear elasticity and small deflections: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
 
