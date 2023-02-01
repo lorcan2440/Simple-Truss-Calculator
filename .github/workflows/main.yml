@@ -23,7 +23,7 @@ jobs:
           pip install black flake8 pytest pytest-cov
       
       - name: Run unit tests and code coverage with pytest
-        run: pytest Source/tests -v --cov --cov-report html
+        run: pytest Source/tests -v --cov
 
       - name: Format with black
         run: black Source
