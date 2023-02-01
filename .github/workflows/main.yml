@@ -29,7 +29,7 @@ jobs:
         run: flake8 --statistics
 
       - name: Run unit tests and code coverage with pytest
-        run: pytest Source/tests -v --cov lcov:cov.info
+        run: pytest Source/tests -v --cov
 
       - name: Covert Coverage Results
         run: |
