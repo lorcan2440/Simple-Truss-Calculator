@@ -43,9 +43,6 @@ jobs:
         with:
           github-token: ${{ secrets.github_token }}
           path-to-lcov: ./coverage/lcov.info
-      
-      - name: Use generated badge
-
 
       #- name: Run deliverables (tasks)
       #  run: sh ./runtasks.sh
