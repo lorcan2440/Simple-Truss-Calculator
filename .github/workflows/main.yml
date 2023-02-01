@@ -21,9 +21,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install black flake8 pytest pytest-cov
-      
-      - name: Run unit tests and code coverage with pytest
-        run: pytest Source/tests -v --cov
 
       - name: Format with black
         run: black Source
@@ -31,19 +28,24 @@ jobs:
       - name: Lint with flake8
         run: flake8 --statistics
 
-    #  - name: Covert Coverage Results
-    #    run: |
-    #      pip install coveragepy-lcov
-    #      coveragepy-lcov --data_file_path .coverage --output_file_path lcov.info
+      - name: Run unit tests and code coverage with pytest
+        run: pytest Source/tests -v --cov lcov:cov.info
+
+      - name: Covert Coverage Results
+        run: |
+          pip install coveragepy-lcov
+          coveragepy-lcov --data_file_path .coverage --output_file_path lcov.info
+          mkdir coverage
+          mv lcov.info /coverage
 
       - name: Upload Coverage Results
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.github_token }}
-          path-to-lcov: lcov.info
+          path-to-lcov: ./coverage/lcov.info
+      
+      - name: Use generated badge
 
-        #with:
-        #  github-token: ${{ secrets.GITHUB_TOKEN }}
 
       #- name: Run deliverables (tasks)
       #  run: sh ./runtasks.sh
