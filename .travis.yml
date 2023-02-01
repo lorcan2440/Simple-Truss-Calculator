@@ -2,6 +2,8 @@
 # with a single version of Python For more information see:
 # https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
+language: python
+
 name: Truss Calculator CI
 
 on: [push, pull_request]
