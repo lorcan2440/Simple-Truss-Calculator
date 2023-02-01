@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -37,7 +37,7 @@ jobs:
       - name: Lint with flake8
         run: flake8 --statistics
     
-      - name: Codecov
+      - name: Code coverage report
         uses: codecov/codecov-action@v3.1.1
 
       #- name: Run deliverables (tasks)
