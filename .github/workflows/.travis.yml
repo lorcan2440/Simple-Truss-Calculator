@@ -30,3 +30,15 @@ jobs:
 
       - name: Lint with flake8
         run: flake8 --statistics
+
+      - name: Code coverage report
+        uses: codecov/codecov-action@v3.1.1
+
+      #- name: Run deliverables (tasks)
+      #  run: sh ./runtasks.sh
+
+      #- name: Run applications
+       # run: |
+       #   python applications/....py
+        #  python applications/....py
+        # python applications/....py 5
