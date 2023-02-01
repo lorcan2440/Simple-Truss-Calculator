@@ -122,13 +122,6 @@ class Bar:
             else:
                 return self.get_direction(self.second_joint, as_degrees=as_degrees)
 
-        else:
-            raise SyntaxError(
-                f'The bar "{self.name}" has an invalid origin joint when finding \n'
-                f"its direction. It should be the objects associated with either \n"
-                f"{self.first_joint_name} or {self.second_joint_name}."
-            )
-
         return angle if not as_degrees else math.degrees(angle)
 
 
@@ -222,7 +215,10 @@ class Result:
         warnings.filterwarnings("ignore")
 
         if _override_res is None:
-            self.results = truss.solve()  # solve truss
+            try:
+                self.results = truss.solve()  # solve truss - truss.results exists
+            except np.linalg.LinAlgError as e:
+                truss.classify_error_in_truss(e)
             self.tensions, self.reactions, self.stresses, self.strains = {}, {}, {}, {}
             self.buckling_ratios = {}
             # populate the tensions, reactions, etc. dictionaries from the results
@@ -272,24 +268,18 @@ class Result:
         Replaces the calculated data with rounded values, to precision given by Result.sig_figs.
         """
         for item in list(self.tensions.keys()):
-            try:
-                self.tensions[item] = sigfig.round(self.tensions[item], self.sig_figs)
-                self.stresses[item] = sigfig.round(self.stresses[item], self.sig_figs)
-                self.strains[item] = sigfig.round(self.strains[item], self.sig_figs)
-                self.buckling_ratios[item] = sigfig.round(
-                    self.buckling_ratios[item], self.sig_figs
-                )
-            except KeyError:
-                continue
+            self.tensions[item] = sigfig.round(self.tensions[item], self.sig_figs)
+            self.stresses[item] = sigfig.round(self.stresses[item], self.sig_figs)
+            self.strains[item] = sigfig.round(self.strains[item], self.sig_figs)
+            self.buckling_ratios[item] = sigfig.round(
+                self.buckling_ratios[item], self.sig_figs
+            )
 
         for item in list(self.reactions.keys()):
-            try:
-                self.reactions[item] = (
-                    sigfig.round(self.reactions[item][0], self.sig_figs),
-                    sigfig.round(self.reactions[item][1], self.sig_figs),
-                )
-            except KeyError:
-                continue
+            self.reactions[item] = (
+                sigfig.round(self.reactions[item][0], self.sig_figs),
+                sigfig.round(self.reactions[item][1], self.sig_figs),
+            )
 
     def get_data(self, truss: object) -> None:
         """
@@ -301,21 +291,13 @@ class Result:
         # errors in the solver function). Currently set to 10 times smaller than the least
         # significant digit of the smallest internal force value.
         # NOTE: maybe move this functionality into `round_data()`.
-        try:
-            SMALL_NUM = (
-                0.1
-                * 10 ** (-1 * self.sig_figs)
-                * min(
-                    [
-                        abs(f)
-                        for f in self.results.values()
-                        if type(f) is not tuple
-                        and f > (0.1 * 10 ** (-1 * self.sig_figs))
-                    ]
-                )
+        SMALL_NUM = (
+            0.1
+            * 10 ** (-1 * self.sig_figs)
+            * min(
+                [abs(f) for f in self.results.values() if isinstance(f, (float, int))]
             )
-        except ValueError:  # triggered if all forces are zero
-            SMALL_NUM = 1e-8
+        )
 
         zero_if_small = lambda x: x if abs(x) > SMALL_NUM else 0  # noqa
 
@@ -502,8 +484,16 @@ class Truss:
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
         """
 
-        _data_types = set([type(d) for d in list_of_joints])
-        _lengths = set([len(d) for d in list_of_joints])
+        _bad_val_msg = "The input `list_of_joints` must be one of the following: \n"
+        '1) a list of dicts of the form {"name": str, "x": float, "y": float}, or \n '
+        "2) a list of 3-tuples of the form (str, float, float) representing (name, x, y), or \n "
+        "3) a list of 2-tuples of the form (float, float) representing (x, y)."
+
+        try:
+            _data_types = set([type(d) for d in list_of_joints])
+            _lengths = set([len(d) for d in list_of_joints])
+        except Exception:
+            raise ValueError(_bad_val_msg)
 
         if len(_data_types) != 1:
             raise ValueError(
@@ -543,12 +533,7 @@ class Truss:
                 self.joints[s] = Joint(self, s, *info)
 
         else:
-            raise ValueError(
-                "The input `list_of_joints` must be one of the following: \n"
-                '1) a list of dicts of the form {"name": str, "x": float, "y": float}, or \n '
-                "2) a list of 3-tuples of the form (str, float, float) representing (name, x, y), or \n "
-                "3) a list of 2-tuples of the form (float, float) representing (x, y)."
-            )
+            raise ValueError(_bad_val_msg)
 
         return self
 
@@ -596,8 +581,21 @@ class Truss:
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
         """
 
-        _data_types = set([type(d) for d in list_of_bars])
-        _lengths = set([len(d) for d in list_of_bars])
+        _bad_val_msg = "The input `list_of_bars` must be one of the following: \n"
+        '1) a list of dicts of the form {"name": str, "first_joint_name": str, '
+        '"second_joint_name": str, "bar_params": dict}, or \n'
+        "2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "
+        '"name", "first_joint_name", "second_joint_name"[, "bar params"], or \n'
+        "3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing "
+        '("first_joint_name", "second_joint_name"[, "bar_params"], or \n'
+        "4) a list of 1 or 2-tuples of the form (str[, dict]) representing "
+        '("name"[, "bar_params"]), or \n'
+        "5) a list of strings representing the names only."
+
+        try:
+            _data_types = set([type(d) for d in list_of_bars])
+        except Exception:
+            raise ValueError(_bad_val_msg)
 
         if len(_data_types) != 1:
             raise ValueError(
@@ -606,7 +604,6 @@ class Truss:
             )
 
         (_data_type,) = _data_types
-        (_length,) = _lengths
 
         if _data_type is dict:
             # Input type 1): expect input of the form {"name": str, "first_joint_name": str,
@@ -652,6 +649,10 @@ class Truss:
                 elif sub_types[:1] == (str,):
                     # Input type 4): expect input of the form (str[, dict])
                     name = info[0]
+                    if len(name) != 2:
+                        raise ValueError(
+                            "Lazily evaluated bar names must be 2 letters long."
+                        )
                     first_joint_name = name[0]
                     second_joint_name = name[1]
                     bar_params = info[1] if len(info) > 1 else None
@@ -661,11 +662,13 @@ class Truss:
                         self, name, first_joint, second_joint, bar_params
                     )
 
-        elif _data_type is str:
+        elif _data_type is str and isinstance(list_of_bars, (list, tuple)):
             # Input type 5): expect input to be a list of 2-character strings
-            if _length != 2:
-                raise ValueError("Lazily evaluated bar names must be 2 letters long.")
             for name in list_of_bars:
+                if len(name) != 2:
+                    raise ValueError(
+                        "Lazily evaluated bar names must be 2 letters long."
+                    )
                 first_joint_name = name[0]
                 second_joint_name = name[1]
                 bar_params = None
@@ -674,18 +677,7 @@ class Truss:
                 self.bars[name] = Bar(self, name, first_joint, second_joint, bar_params)
 
         else:
-            raise ValueError(
-                "The input `list_of_bars` must be one of the following: \n"
-                '1) a list of dicts of the form {"name": str, "first_joint_name": str, '
-                '"second_joint_name": str, "bar_params": dict}, or \n'
-                "2) a list of 3 or 4-tuples of the form (str, str, str[, dict]) representing "
-                '"name", "first_joint_name", "second_joint_name"[, "bar params"], or \n'
-                "3) a list of 2 or 3-tuples of the form (str, str[, dict]) representing "
-                '("first_joint_name", "second_joint_name"[, "bar_params"], or \n'
-                "4) a list of 1 or 2-tuples of the form (str[, dict]) representing "
-                '("name"[, "bar_params"]), or \n'
-                "5) a list of strings representing the names only."
-            )
+            raise ValueError(_bad_val_msg)
 
         return self
 
@@ -722,8 +714,18 @@ class Truss:
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
         """
 
-        _data_types = set([type(d) for d in list_of_loads])
-        _lengths = set([len(d) for d in list_of_loads])
+        _bad_val_msg = "The input `list_of_loads` must be one of the following: \n"
+        "1) a list of dicts of the form "
+        '{"name": str, "joint_name": str, "x": float, "y": float}, or \n'
+        "2) a list of 4-tuples of the form (str, str, float, float) representing "
+        '"name", "joint_name", "x", "y", or \n'
+        "3) a list of 3-tuples of the form (str, float, float) representing "
+        '"joint_name", "x", "y".'
+
+        try:
+            _data_types = set([type(d) for d in list_of_loads])
+        except Exception:
+            raise ValueError(_bad_val_msg)
 
         if len(_data_types) != 1:
             raise ValueError(
@@ -732,7 +734,6 @@ class Truss:
             )
 
         (_data_type,) = _data_types
-        (_length,) = _lengths
 
         if _data_type is dict:
             # Input type 1): expect input of the form {"name": str, "joint_name": str,
@@ -760,15 +761,7 @@ class Truss:
                 self.loads[name] = Load(name, joint, x, y)
 
         else:
-            raise ValueError(
-                "The input `list_of_loads` must be one of the following: \n"
-                "1) a list of dicts of the form "
-                '{"name": str, "joint_name": str, "x": float, "y": float}, or \n'
-                "2) a list of 4-tuples of the form (str, str, float, float) representing "
-                '"name", "joint_name", "x", "y", or \n'
-                "3) a list of 3-tuples of the form (str, float, float) representing "
-                '"joint_name", "x", "y".'
-            )
+            raise ValueError(_bad_val_msg)
 
         return self
 
@@ -808,11 +801,22 @@ class Truss:
         `ValueError`: if a mixture of input types is given, or if the type is not one the above.
         """
 
-        _data_types = set([type(d) for d in list_of_supports])
+        _bad_val_msg = "The input `list_of_supports` must be one of the following: \n"
+        '1) a list of dicts of the form {"name": str, "joint_name": str, '
+        '"support_type": str, "pin_rotation": float}, or \n'
+        "2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "
+        '"name", "joint_name", "support_type", "pin_rotation", or \n'
+        "3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "
+        '"joint_name", "support_type", "pin_rotation".'
+
+        try:
+            _data_types = set([type(d) for d in list_of_supports])
+        except Exception:
+            raise ValueError(_bad_val_msg)
 
         if len(_data_types) != 1:
             raise ValueError(
-                "All entries in `list_of_loads` must have "
+                "All entries in `list_of_supports` must have "
                 f"the same type: either tuples or dicts. Got a mixture: {_data_types}."
             )
 
@@ -859,15 +863,7 @@ class Truss:
             raise NotImplementedError()
 
         else:
-            raise ValueError(
-                "The input `list_of_loads` must be one of the following: \n"
-                '1) a list of dicts of the form {"name": str, "joint_name": str, '
-                '"support_type": str, "pin_rotation": float}, or \n'
-                "2) a list of 3 or 4-tuples of the form (str, str, str[, float]) representing "
-                '"name", "joint_name", "support_type", "pin_rotation", or \n'
-                "3) a list of 2 or 3-tuples of the form (str, str[, float]) representing "
-                '"joint_name", "support_type", "pin_rotation".'
-            )
+            raise ValueError(_bad_val_msg)
 
         return self
 
@@ -1047,21 +1043,21 @@ class Truss:
         valid = self.is_statically_determinate()
 
         if not valid:
-            raise ArithmeticError(
+            raise BadTrussError(
                 f"""The truss is not statically determinate.
                 It cannot be solved. \nBars: {self.b} \t Reactions: {self.F} \t Joints: {self.j}.
                 \n b + F = {self.b + self.F}, 2j = {2 * self.j}"""
             )
 
         elif str(e) == "Singular matrix":
-            raise TypeError(
+            raise BadTrussError(
                 """
             The truss contains mechanistic and/or overconstrained components despite
             being globally statically determinate. It cannot be solved without compatibility."""
             )
 
         else:
-            raise TypeError("Something else went wrong. Requires attention.")
+            raise BadTrussError("Something else went wrong. Requires attention.")
 
     def dump_truss_to_json(
         self, filedir: Optional[str] = None, filename: Optional[str] = None
@@ -1367,15 +1363,16 @@ def plot_diagram(
             )
 
             # draw an arrow of fixed length to show the direction of the reaction
-            plt.arrow(
-                support.joint.x,
-                support.joint.y,
-                LEN * math.cos(reaction_direction),
-                LEN * math.sin(reaction_direction),
-                head_width=LEN / 5,
-                head_length=LEN / 4,
-                facecolor="red",
-            )
+            if results.reactions[support.name] != (0, 0):
+                plt.arrow(
+                    support.joint.x,
+                    support.joint.y,
+                    LEN * math.cos(reaction_direction),
+                    LEN * math.sin(reaction_direction),
+                    head_width=LEN / 5,
+                    head_length=LEN / 4,
+                    facecolor="red",
+                )
 
         # TODO: if there is another support at this `support.joint`,
         # label it at an angle of `180 + pin_rotation` instead

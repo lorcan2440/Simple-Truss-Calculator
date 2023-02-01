@@ -1,16 +1,36 @@
+if __name__ == '__main__':
+    import __init__  # noqa
+
 from truss import Result, init_truss, plot_diagram, load_truss_from_json, BadTrussError
 import pytest
 import os
+import numpy as np
 
 import utils
 
 import math
 
 
+# utility - quick build
+def build_sdc_truss():
+
+    my_truss = init_truss('SDC: Steel Cantilever')
+    my_truss.add_joints(
+        [(0, 0), (290, -90), (815, 127.5), (290, 345), (0, 255), (220.836, 127.5)]
+    )
+    my_truss.add_bars(['AB', 'BC', 'CD', 'DE', 'EF', 'AF', 'DF', 'BF'])
+    my_truss.add_loads([('W', 'C', 0, -0.675)])
+    my_truss.add_supports([('A', 'encastre'), ('E', 'pin', -math.pi / 2)])
+
+    results = Result(my_truss)
+
+    return my_truss, results
+
+
 # test cases to check general functionality
 
 
-def test_build_standard_SDC_truss():
+def test_sdc_truss_verbose_creation():
 
     medium_2 = {"b": 16, "t": 1.1, "D": 5, "E": 210, "strength_max": 0.216}
     custom_params = medium_2
@@ -97,9 +117,14 @@ def test_build_standard_SDC_truss():
 
     results = Result(truss)
 
+    print(results)
+
     plot_diagram(truss, results, full_screen=False, show_reactions=True)
 
     fields = ("tensions", "reactions", "stresses", "strains", "buckling_ratios")
+
+    # check determinate
+    assert truss.check_determinacy_type() == 'determinate'
 
     # check results fields have been set
     assert hasattr(truss, "results")
@@ -164,20 +189,23 @@ def test_build_standard_SDC_truss():
     )
 
 
-def test_build_small_bridge():
+def test_truss_semi_lazy_creation():
 
-    joints = ((0, 0), (100, 0), (200, 0), (100, 100))
-    bars = ('AB', 'BC', 'AD', 'CD', 'BD')
-    loads = [('B', 0, -100),]
-    supports = (('A', 'pin'), ('C', 'roller', 0))
+    bar_params = {"b": 0.018, "t": 0.005, "D": 0.024, "E": 2.1e11, "strength_max": 3.2e9}
 
-    t = init_truss('Mini Bridge')
+    joints = (('P', 0, 0), ('Q', 100, 0), ('R', 200, 0), ('S', 100, 100))  # set names
+    bars = (('Left Span', 'P', 'Q', bar_params), ('Right Span', 'Q', 'R', bar_params), ('Left Mast', 'P', 'S'),
+        ('Right Mast', 'R', 'S'), ('Pillar', 'Q', 'S'))
+    loads = [('Truck', 'Q', 0, -100),]
+    supports = (('Enbankment', 'P', 'encastre'), ('Rail', 'R', 'roller', 0.3))
+
+    t = init_truss('BTEC Bridge')
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
     r = Result(t)
     plot_diagram(t, r)
 
 
-def test_build_large_bridge():
+def test_truss_very_lazy_creation_with_multiple_steps():
 
     joints = ((0, 0), (100, 0), (200, 0), (300, 0), (400, 0), (100, 100), (200, 100), (300, 100))
     bars = ('AB', 'BC', 'CD', 'DE', 'AF', 'BF', 'CF', 'CG', 'CH', 'DH', 'EH', 'FG', 'GH')
@@ -186,6 +214,18 @@ def test_build_large_bridge():
 
     t = init_truss('Big Bridge')
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+
+    bar_params = {"b": 0.018, "t": 0.005, "D": 0.024, "E": 1.0e11, "strength_max": 1.3e9}
+
+    extra_joints = ((200, 200), (150, 50), (250, 50))
+    extra_bars = (('F', 'I', bar_params), ('I', 'H', bar_params),
+        ('I', 'J',), ('I', 'K',))
+
+    t.add_joints(extra_joints).add_bars(extra_bars)
+
+    extra_bars = (('JB', bar_params), ('KD',))
+    t.add_bars(extra_bars)
+
     r = Result(t)
     plot_diagram(t, r)
 
@@ -199,6 +239,20 @@ def test_build_large_bridge_with_angled_roller():
 
     t = init_truss('Big Bridge')
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+    r = Result(t)
+    plot_diagram(t, r)
+
+
+def test_small_arch():
+
+    joints = ((0, 0), (100, 100 * math.sqrt(3)), (200, 0))
+    bars = ('AB', 'BC', 'AC')
+    loads = (('B', 0, -100),)
+    supports = (('A', 'pin'), ('C', 'roller', math.pi / 4))
+
+    t = init_truss('Triangle')
+    t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+
     r = Result(t)
     plot_diagram(t, r)
 
@@ -219,7 +273,7 @@ def test_underconstrained_arch():
     with pytest.raises(BadTrussError, match=r'.*\(underconstrained; mechanistic\). '
             r'Bars = \d+, Forces = \d+, Joints = \d+ .*'):
         r = Result(t)
-        plot_diagram(t, r)
+        del r
 
 
 def test_overconstrained_truss():
@@ -238,7 +292,25 @@ def test_overconstrained_truss():
     with pytest.raises(BadTrussError, match=r'.*\(overconstrained\). '
             r'Bars = \d+, Forces = \d+, Joints = \d+ .*'):
         r = Result(t)
-        plot_diagram(t, r)
+        del r
+
+
+def test_determinate_but_internally_singular_truss():
+
+    joints = ((0, 0), (100, 0), (0, 100), (100, 100), (0, 200), (100, 200))
+    bars = ('AB', 'CD', 'EF', 'AC', 'BD', 'CE', 'DF', 'AD', 'BC')
+    loads = [('C', 100, 50)]
+    supports = (('A', 'pin'), ('B', 'roller'))
+
+    with pytest.raises(np.linalg.LinAlgError, match='Singular matrix'):
+        t = init_truss().add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports).solve()
+
+    t = init_truss().add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+
+    with pytest.raises(BadTrussError,
+            match=r'The truss contains mechanistic and/or overconstrained components'):
+        r = Result(t)
+        del r
 
 
 def test_save_and_load_json_truss():
@@ -264,5 +336,55 @@ def test_save_and_load_json_truss():
     )
 
 
-if __name__ == "__main__":
-    test_overconstrained_truss()
+def test_unloaded():
+
+    joints = ((0, 0), (1, 0.75), (2, 0))
+    bars = ('AB', 'BC')
+    supports = (('A', 'pin'), ('C', 'pin'))
+    t = init_truss().add_joints(joints).add_bars(bars).add_supports(supports)
+    r = Result(t)
+    plot_diagram(t, r)
+
+
+def test_bad_inputs():
+
+    joints = ((0, 0), (1, 0.75), (2, 0))
+    bars = ('AB', 'BC')
+    supports = (('A', 'WAHEY!!'), ('C', 'pin'))
+
+    # test invalid support type
+    with pytest.raises(ValueError, match=r'Support type must be'):
+        t = init_truss().add_joints(joints).add_bars(bars).add_supports(supports)
+
+    # replace lazy named bar with bad name
+    bars = ('Bar AB', 'BC')
+    with pytest.raises(ValueError, match=r'Lazily evaluated bar names'):
+        t = init_truss().add_joints(joints).add_bars(bars)
+
+    bars = (('Bar AB',), ('BC', {'b': 50}))
+    with pytest.raises(ValueError, match=r'Lazily evaluated bar names'):
+        t = init_truss().add_joints(joints).add_bars(bars)
+
+    # total nonsense
+    joints = 'lalala'
+    bars = 69420
+    loads = lambda _: None  # noqa
+    supports = NotImplementedError
+    with pytest.raises(ValueError, match=r'The input `list_of_joints` must be one of the following'):
+        t = init_truss().add_joints(joints)
+    with pytest.raises(ValueError, match=r'The input `list_of_bars` must be one of the following'):
+        t = init_truss().add_joints([(0, 0), (1, 0)]).add_bars(bars)
+    with pytest.raises(ValueError, match=r'The input `list_of_loads` must be one of the following'):
+        t = init_truss().add_joints([(0, 0), (1, 0)]).add_bars(('AB',)).add_loads(loads)
+    with pytest.raises(ValueError, match=r'The input `list_of_supports` must be one of the following'):
+        t = init_truss().add_joints([(0, 0), (1, 0)]).add_bars(('AB',)).add_loads(
+            [('A', 0, 1)]).add_supports(supports)
+        del t
+
+
+def test_autobuild_sdc():
+    plot_diagram(*build_sdc_truss())
+
+
+if __name__ == "__main__":  # pragma: no cover
+    test_autobuild_sdc()
