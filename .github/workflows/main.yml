@@ -22,8 +22,8 @@ jobs:
           pip install -r requirements.txt
           pip install black flake8 pytest pytest-cov
       
-      - name: Run unit tests with pytest
-        run: pytest -v --cov --cov-report html
+      - name: Run unit tests and code coverage with pytest
+        run: pytest Source/tests -v --cov --cov-report html
 
       - name: Format with black
         run: black Source
@@ -31,8 +31,16 @@ jobs:
       - name: Lint with flake8
         run: flake8 --statistics
 
-      - name: Coveralls Python
-        uses: AndreMiras/coveralls-python-action@v20201129
+      - name: Covert Coverage Results
+        run: |
+          pip install coveragepy-lcov
+          coveragepy-lcov --data_file_path .coverage --output_file_path lcov.info
+
+      - name: Upload Coverage Results
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: lcov.info
 
         #with:
         #  github-token: ${{ secrets.GITHUB_TOKEN }}
