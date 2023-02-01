@@ -29,7 +29,7 @@ jobs:
         run: flake8 --statistics
 
       - name: Run unit tests with pytest and code coverage with coverage.py
-        run: pytest Source/tests -v --cov
+        run: pytest Source/tests -v --cov=Source/ --cov-report lcov:Source/tests/lcov.info
 
       #- name: Covert Coverage Results
       #  run: |
@@ -40,13 +40,8 @@ jobs:
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.github_token }}
-          path-to-lcov: lcov.info
+          path-to-lcov: Source/tests/lcov.info
 
-      #- name: Run deliverables (tasks)
-      #  run: sh ./runtasks.sh
 
-      #- name: Run applications
-       # run: |
-       #   python applications/....py
-        #  python applications/....py
-        # python applications/....py 5
+#- name: Run deliverables (tasks)
+#  run: sh ./runtasks.sh
