@@ -203,7 +203,7 @@ def test_build_large_bridge_with_angled_roller():
     plot_diagram(t, r)
 
 
-def __test_underconstrained_arch():
+def test_underconstrained_arch():
 
     joints = ((0, 0), (100, 100 * math.sqrt(3)), (200, 0))
     bars = ('AB', 'BC')
@@ -213,10 +213,30 @@ def __test_underconstrained_arch():
     t = init_truss('Simple Arch')
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
 
-    check = t.check_for_statical_determinacy()
-    assert not check['is_statically_determinate']
+    assert not t.is_statically_determinate()
+    assert t.check_determinacy_type() == 'underconstrained'
 
-    with pytest.raises(BadTrussError, match=r'Unstable \d+$'):
+    with pytest.raises(BadTrussError, match=r'.*\(underconstrained; mechanistic\). '
+            r'Bars = \d+, Forces = \d+, Joints = \d+ .*'):
+        r = Result(t)
+        plot_diagram(t, r)
+
+
+def test_overconstrained_truss():
+
+    joints = ((0, 0), (100, 0), (200, 0), (100, 100))
+    bars = ('AB', 'BC', 'AD', 'CD', 'BD')
+    loads = [('B', 0, -100),]
+    supports = (('A', 'pin'), ('C', 'pin'))
+
+    t = init_truss('Small bridge')
+    t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+
+    assert not t.is_statically_determinate()
+    assert t.check_determinacy_type() == 'overconstrained'
+
+    with pytest.raises(BadTrussError, match=r'.*\(overconstrained\). '
+            r'Bars = \d+, Forces = \d+, Joints = \d+ .*'):
         r = Result(t)
         plot_diagram(t, r)
 
@@ -245,4 +265,4 @@ def test_save_and_load_json_truss():
 
 
 if __name__ == "__main__":
-    test_build_large_bridge_with_angled_roller()
+    test_overconstrained_truss()

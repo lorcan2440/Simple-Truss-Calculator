@@ -222,10 +222,9 @@ class Result:
         warnings.filterwarnings("ignore")
 
         if _override_res is None:
-            self.results = truss.solve()
+            self.results = truss.solve()  # solve truss
             self.tensions, self.reactions, self.stresses, self.strains = {}, {}, {}, {}
             self.buckling_ratios = {}
-
             # populate the tensions, reactions, etc. dictionaries from the results
             self.get_data(truss)
 
@@ -427,6 +426,47 @@ class Truss:
                 self.default_params["strength_max"] *= 1e-6
         else:
             self.default_params = kwargs.get("bar_params")
+
+    def is_statically_determinate(self) -> bool:
+
+        b = len(self.bars)
+        j = len(self.joints)
+        f = sum(
+            [
+                1 if support.support_type == "roller" else 2
+                for support in self.supports.values()
+            ]
+        )
+
+        return b + f == 2 * j
+
+    def check_determinacy_type(self, raise_exception: bool = False) -> str:
+
+        b = len(self.bars)
+        j = len(self.joints)
+        f = sum(
+            [
+                1 if support.support_type == "roller" else 2
+                for support in self.supports.values()
+            ]
+        )
+
+        if b + f > 2 * j:
+            if raise_exception:
+                raise BadTrussError(
+                    "The truss is statically indeterminate (overconstrained). "
+                    f"Bars = {b}, Forces = {f}, Joints = {j} therefore {b + f} > {2 * j} (b + F > 2j)."
+                )
+            return "overconstrained"
+        elif b + f < 2 * j:
+            if raise_exception:
+                raise BadTrussError(
+                    "The truss is statically indeterminate (underconstrained; mechanistic). "
+                    f"Bars = {b}, Forces = {f}, Joints = {j} therefore {b + f} < {2 * j} (b + F < 2j)."
+                )
+            return "underconstrained"
+        else:
+            return "determinate"
 
     # object builders
 
@@ -845,6 +885,9 @@ class Truss:
         all_joints = self.get_all_objs(self.joints)
         all_supports = self.get_all_objs(self.supports)
 
+        if not self.is_statically_determinate():
+            self.check_determinacy_type(raise_exception=True)
+
         # List of dictionaries for unknowns, given default zero values
         wanted_vars = []
         for bar in all_bars:
@@ -993,32 +1036,6 @@ class Truss:
 
         # Return the values in dict form
         return output_dict
-
-    def is_statically_determinate(self) -> bool:
-
-        """
-        Does a simple arithmetic check to estimate if the truss
-        is statically determinate (b + F = 2j). Also stores attributes for later quick use.
-        """
-
-        # b: number of bars in the truss
-        # F: number of degrees of freedom for the reactions at the supports
-        # j: number of joints in the truss
-        # if b + F > 2j, the truss is overconstrained, while if b + F < 2j, the truss is a mechanism
-        self.b = len(self.get_all_objs(self.bars, str_names_only=True))
-        self.F = sum(
-            [
-                2
-                if support.support_type in {"encastre", "pin"}
-                else 1
-                if support.support_type == "roller"
-                else 0
-                for support in self.get_all_objs(self.supports)
-            ]
-        )
-        self.j = len(self.get_all_objs(self.joints, str_names_only=True))
-
-        return self.b + self.F == 2 * self.j
 
     def classify_error_in_truss(self, e: np.linalg.LinAlgError) -> None:
 
