@@ -28,21 +28,19 @@ jobs:
       - name: Lint with flake8
         run: flake8 --statistics
 
-      - name: Run unit tests and code coverage with pytest
+      - name: Run unit tests with pytest and code coverage with coverage.py
         run: pytest Source/tests -v --cov
 
-      - name: Covert Coverage Results
-        run: |
-          pip install coveragepy-lcov
-          coveragepy-lcov --data_file_path .coverage --output_file_path lcov.info
-          mkdir coverage
-          mv lcov.info /coverage
+      #- name: Covert Coverage Results
+      #  run: |
+      #    pip install coveragepy-lcov
+      #    coveragepy-lcov --data_file_path .coverage --output_file_path lcov.info
 
       - name: Upload Coverage Results
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.github_token }}
-          path-to-lcov: ./coverage/lcov.info
+          path-to-lcov: lcov.info
 
       #- name: Run deliverables (tasks)
       #  run: sh ./runtasks.sh
