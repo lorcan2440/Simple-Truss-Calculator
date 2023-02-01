@@ -7,7 +7,7 @@ import math
 import warnings
 from matplotlib import pyplot as plt
 from typing import Hashable, Optional
-from enum import Enum, auto, unique
+from enum import Enum, unique
 
 
 #  Fix issue with warning appearing when run from .exe
@@ -15,19 +15,6 @@ if os.path.basename(__file__).endswith(".exe"):
     warnings.filterwarnings(
         "ignore", "(?s).*MATPLOTLIBDATA.*", category=UserWarning
     )  # deprecation warning inherits from UserWarning
-
-
-@unique
-class SolveMethod(Enum):
-
-    """
-    A class to contain the different methods for solving the truss force balance equation
-    Ax = B. Can see the different methods using get_constants(SolveMethod).
-    """
-
-    NUMPY_STD = auto()
-    NUMPY_SOLVE = auto()
-    SCIPY = auto()
 
 
 @unique
@@ -178,7 +165,7 @@ def find_free_space_around_joint(
     if support is not None:
         if show_reactions:
             if support.support_type == "roller":
-                used_angles.append(math.pi + support.reaction_direction)
+                used_angles.append(math.pi + support.normal_direction)
             used_angles.append(math.atan2(*reversed(results.reactions[support.name])))
 
         else:
@@ -209,8 +196,8 @@ def rotate_coords(p: tuple[float], x: float, y: float, a: float) -> tuple[float]
     """
 
     return (
-        x + (p[0] - x) * math.cos(a) + (p[1] - y) * math.sin(a),
-        y - (p[0] - x) * math.sin(a) + (p[1] - y) * math.cos(a),
+        x + (p[0] - x) * math.cos(a) - (p[1] - y) * math.sin(a),
+        y + (p[0] - x) * math.sin(a) + (p[1] - y) * math.cos(a),
     )
 
 
@@ -229,23 +216,7 @@ def draw_support(
     shown by rotating the drawing. Optional pin rotation in clockwise degrees from vertical.
     """
 
-    # Helper function to rotate the drawing
-    if pin_rotation != 0:  # either but not both: cannot be encastre
-        if support_type == "roller":
-            a = math.pi / 2 - math.atan2(*reversed(roller_normal))
-
-        elif support_type == "pin":
-            a = -1 * pin_rotation
-
-        else:
-            raise TypeError(
-                f"""
-            'The combination of supplied information: support type ({support_type}), pin rotation angle'
-            '({pin_rotation}) and roller direction ({roller_normal}) is invalid."""
-            )
-
-        # function for rotating a given coordinate
-        rot = lambda _p: rotate_coords(_p, x, y, a)  # noqa
+    a = pin_rotation
 
     if support_type == "encastre":
 
@@ -350,6 +321,7 @@ def draw_support(
                 )
         else:
             # Transform the important points to be plotted
+            rot = lambda _p: rotate_coords(_p, x, y, a)  # noqa
             _new_pts = list(map(rot, _old_pts))
             xtl, ytl = map(list, zip(*_new_pts))
 
@@ -386,6 +358,7 @@ def draw_support(
             (x + (0.7 / (3 * math.sqrt(3))) * size, y - 13 / 30 * size),
         ]
 
+        rot = lambda _p: rotate_coords(_p, x, y, a)  # noqa
         _new_pts = list(map(rot, _old_pts))
         xtl, ytl = map(list, zip(*_new_pts))
 

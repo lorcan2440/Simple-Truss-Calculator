@@ -10,7 +10,6 @@ pin-jointed, straight-membered, plane truss.
 
 # builtin modules
 from typing import Optional
-from enum import Enum
 import warnings
 import math
 import json
@@ -21,7 +20,6 @@ import utils
 
 # auto install missing modules, least likely to be already installed first
 import sigfig  # for rounding values nicely
-from scipy.sparse import csr_matrix, linalg as linsolver  # for faster solving
 from matplotlib import pyplot as plt  # to display graphical output
 import numpy as np  # to do matrix operations
 
@@ -215,7 +213,6 @@ class Result:
         self,
         truss: object,
         sig_figs: Optional[int] = 4,
-        solution_method: Enum = utils.SolveMethod.NUMPY_SOLVE,
         _override_res: Optional[tuple[dict]] = None,
     ):
 
@@ -225,7 +222,7 @@ class Result:
         warnings.filterwarnings("ignore")
 
         if _override_res is None:
-            self.results = truss.solve(solution_method=solution_method)
+            self.results = truss.solve()
             self.tensions, self.reactions, self.stresses, self.strains = {}, {}, {}, {}
             self.buckling_ratios = {}
 
@@ -321,15 +318,12 @@ class Result:
         except ValueError:  # triggered if all forces are zero
             SMALL_NUM = 1e-8
 
+        zero_if_small = lambda x: x if abs(x) > SMALL_NUM else 0  # noqa
+
         for item in self.results:
-
-            if isinstance(self.results[item], float):
-
-                if abs(self.results[item]) < SMALL_NUM:
-                    self.tensions.update({item: 0})
-                else:
-                    self.tensions.update({item: self.results[item]})
-
+            if isinstance(self.results[item], float) and item in truss.bars:
+                # we have a bar tension
+                self.tensions.update({item: zero_if_small(self.results[item])})
                 self.stresses.update(
                     {item: self.tensions[item] / truss.bars[item].effective_area}
                 )
@@ -337,20 +331,29 @@ class Result:
                 self.buckling_ratios.update({item: truss.bars[item].buckling_ratio})
                 # NOTE: could check if the bar is in compression using: if self.results[item] < 0:
 
-            elif isinstance(self.results[item], tuple):
-
-                self.reactions.update(
-                    {
-                        item: (
-                            self.results[item][0]
-                            if abs(self.results[item][0]) > SMALL_NUM
-                            else 0,
-                            self.results[item][1]
-                            if abs(self.results[item][1]) > SMALL_NUM
-                            else 0,
-                        )
-                    }
-                )
+            elif item in truss.supports:
+                # we have a reaction support - could be 2-tuple (pin/encastre) or float (roller)
+                if isinstance(self.results[item], tuple):
+                    self.reactions.update(
+                        {
+                            item: (
+                                zero_if_small(self.results[item][0]),
+                                zero_if_small(self.results[item][1]),
+                            )
+                        }
+                    )
+                elif isinstance(self.results[item], float):
+                    roller_reaction = (
+                        self.results[item] * truss.supports[item].roller_normal
+                    )
+                    self.reactions.update(
+                        {
+                            item: (
+                                zero_if_small(roller_reaction[0]),
+                                zero_if_small(roller_reaction[1]),
+                            )
+                        }
+                    )
 
             else:
                 warnings.warn(
@@ -830,9 +833,7 @@ class Truss:
 
     # TRUSS METHODS
 
-    def solve(
-        self, solution_method: Enum = utils.SolveMethod.SCIPY
-    ) -> dict[str, float | tuple]:
+    def solve(self) -> dict[str, float | tuple]:
 
         """
         The main part of the program. Calculates the forces in the truss's bars and supports
@@ -879,12 +880,10 @@ class Truss:
 
             # If there are external loads at this joint, store their directions too
             for load in self.get_all_loads_at_joint(joint):
-                directions[
-                    "Horizontal component of {} at {}".format(load.name, joint.name)
-                ] = 0
-                directions[
-                    "Vertical component of {} at {}".format(load.name, joint.name)
-                ] = (math.pi / 2)
+                directions[f"Horizontal component of {load.name} at {joint.name}"] = 0
+                directions[f"Vertical component of {load.name} at {joint.name}"] = (
+                    math.pi / 2
+                )
 
             all_directions[joint.name] = directions
 
@@ -896,7 +895,7 @@ class Truss:
             joint_name = joint.name
             support = self.get_support_by_joint(joint)
 
-            if getattr(support, "support_type", None) != "roller":
+            if support is None or support.support_type != "roller":
                 # pin joint or pin/encastre support, resolve in x and y
 
                 # get the coefficients (matrix M), representing the unknown internal/reaction forces
@@ -925,19 +924,6 @@ class Truss:
                     round(
                         math.cos(
                             all_directions[joint_name].get(
-                                var, support.normal_direction
-                            )
-                            - support.normal_direction
-                        ),
-                        10,
-                    )
-                    for var in wanted_vars
-                ]
-                coefficients.append(current_line)
-                current_line = [
-                    round(
-                        math.sin(
-                            all_directions[joint_name].get(
                                 var, support.normal_direction + math.pi / 2
                             )
                             - support.normal_direction
@@ -946,7 +932,24 @@ class Truss:
                     )
                     for var in wanted_vars
                 ]
-                coefficients.append(current_line)
+                coefficients.append(current_line)  # parallel to roller normal
+
+                current_line = [
+                    round(
+                        math.sin(
+                            all_directions[joint_name].get(
+                                var, support.normal_direction
+                            )
+                            - support.normal_direction
+                        ),
+                        10,
+                    )
+                    for var in wanted_vars
+                ]
+
+                coefficients.append(
+                    current_line
+                )  # perpendicular to roller normal - expect all zeroes
 
                 # get the constants (vector B), representing the external loads, -ve since on other side of eqn
                 sum_parallel, sum_perp = 0, 0
@@ -966,32 +969,11 @@ class Truss:
             if constants[i] == [] or constants[i] == [None]:
                 constants[i] = [0]
 
-        # Solve the system - both coefficient and constant matrices are sparse (for most practical cases)
-        # so ideally the SCIPY method is faster. NOTE: However testing showed that the difference is not huge,
-        # possibly because the solution itself is not sparse.
-        if solution_method is utils.SolveMethod.NUMPY_STD:
-            m, b = np.matrix(coefficients), np.matrix(constants)
-            x = np.linalg.inv(m) * b
-
-        elif solution_method is utils.SolveMethod.NUMPY_SOLVE:
-            m, b = np.matrix(coefficients), np.matrix(constants)
-            x = np.linalg.solve(m, b)
-
-        elif solution_method is utils.SolveMethod.SCIPY:
-            m, b = csr_matrix(coefficients), csr_matrix(constants)
-            x = linsolver.spsolve(m, b)
-
-        else:
-            raise SyntaxError(
-                f"The solution method {solution_method} is not supported. \n"
-                f"The allowed methods are (either using constants or string literals): \n"
-                f"{utils.get_constants(utils.SolveMethod)}\n"
-                f"For example: \t solution_method=SolveMethod.NUMPY_SOLVE \t or \t"
-                f"solution_method='numpy_solve'"
-            )
+        # Solve the system
+        m, b = np.array(coefficients), np.array(constants)
+        x = np.linalg.solve(m, b)
 
         # Map solution back to each object name
-
         output_dict = {}
         for i, (var_name, val) in enumerate(zip(wanted_vars, x)):
             if "Tension in " in var_name:
@@ -1002,7 +984,7 @@ class Truss:
                     self.joints[var_name.split("reaction at ")[-1]], str_names_only=True
                 )
                 if support_name not in output_dict:
-                    if "magnitude" in var_name:
+                    if "Magnitude" in var_name:
                         output_dict[support_name] = float(val)
                     else:
                         output_dict[support_name] = (float(val), float(x[i + 1]))
@@ -1275,6 +1257,10 @@ class Truss:
             return None
 
 
+class BadTrussError(Exception):
+    pass
+
+
 # Classes end here, main program functions start here
 
 
@@ -1490,7 +1476,6 @@ def load_truss_from_json(
             truss_results = Result(
                 truss,
                 sig_figs=3,
-                solution_method=None,
                 _override_res=(
                     {bn: res["tensions"][bn] for bn in bar_names},
                     {sn: res["reactions"][sn] for sn in support_names},

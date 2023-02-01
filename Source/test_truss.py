@@ -1,4 +1,4 @@
-from truss import Result, init_truss, plot_diagram, load_truss_from_json
+from truss import Result, init_truss, plot_diagram, load_truss_from_json, BadTrussError
 import pytest
 import os
 
@@ -95,7 +95,7 @@ def test_build_standard_SDC_truss():
         ]
     )
 
-    results = Result(truss, solution_method=utils.SolveMethod.NUMPY_STD)
+    results = Result(truss)
 
     plot_diagram(truss, results, full_screen=False, show_reactions=True)
 
@@ -164,6 +164,63 @@ def test_build_standard_SDC_truss():
     )
 
 
+def test_build_small_bridge():
+
+    joints = ((0, 0), (100, 0), (200, 0), (100, 100))
+    bars = ('AB', 'BC', 'AD', 'CD', 'BD')
+    loads = [('B', 0, -100),]
+    supports = (('A', 'pin'), ('C', 'roller', 0))
+
+    t = init_truss('Mini Bridge')
+    t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+    r = Result(t)
+    plot_diagram(t, r)
+
+
+def test_build_large_bridge():
+
+    joints = ((0, 0), (100, 0), (200, 0), (300, 0), (400, 0), (100, 100), (200, 100), (300, 100))
+    bars = ('AB', 'BC', 'CD', 'DE', 'AF', 'BF', 'CF', 'CG', 'CH', 'DH', 'EH', 'FG', 'GH')
+    loads = [('A', 0, -100), ('B', 0, -200), ('C', 0, -200), ('D', 0, -200), ('E', 0, -100)]
+    supports = (('A', 'pin'), ('E', 'roller'))
+
+    t = init_truss('Big Bridge')
+    t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+    r = Result(t)
+    plot_diagram(t, r)
+
+
+def test_build_large_bridge_with_angled_roller():
+
+    joints = ((0, 0), (100, 0), (200, 0), (300, 0), (400, 0), (100, 100), (200, 100), (300, 100))
+    bars = ('AB', 'BC', 'CD', 'DE', 'AF', 'BF', 'CF', 'CG', 'CH', 'DH', 'EH', 'FG', 'GH')
+    loads = [('A', 0, -100), ('B', 0, -200), ('C', 0, -200), ('D', 0, -200), ('E', 0, -100)]
+    supports = (('A', 'pin'), ('E', 'roller', math.pi / 4))
+
+    t = init_truss('Big Bridge')
+    t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+    r = Result(t)
+    plot_diagram(t, r)
+
+
+def __test_underconstrained_arch():
+
+    joints = ((0, 0), (100, 100 * math.sqrt(3)), (200, 0))
+    bars = ('AB', 'BC')
+    loads = (('B', 0, -100), ('C', 0, -100))
+    supports = (('A', 'pin'), ('C', 'roller', math.pi / 4))
+
+    t = init_truss('Simple Arch')
+    t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
+
+    check = t.check_for_statical_determinacy()
+    assert not check['is_statically_determinate']
+
+    with pytest.raises(BadTrussError, match=r'Unstable \d+$'):
+        r = Result(t)
+        plot_diagram(t, r)
+
+
 def test_save_and_load_json_truss():
 
     t = (
@@ -187,7 +244,5 @@ def test_save_and_load_json_truss():
     )
 
 
-# test cases for coverage
-
 if __name__ == "__main__":
-    test_save_and_load_json_truss()
+    test_build_large_bridge_with_angled_roller()
