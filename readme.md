@@ -10,6 +10,8 @@ See `Source/Truss_Calculator.py` for the program.
 
 Assumes linear elasticity and small deflections: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
 
+![GitHub CI](https://github.com/<OWNER>/<REPOSITORY>/actions/workflows/main.yml/badge.svg)
+
 
 ## To-do List and Future Aims
 
