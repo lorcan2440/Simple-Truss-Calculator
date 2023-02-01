@@ -45,3 +45,8 @@ jobs:
        #   python applications/....py
         #  python applications/....py
         # python applications/....py 5
+
+before_install:
+  - pip install --user codecov
+after_success:
+  - codecov --file coverage/lcov.info --disable search
