@@ -12,6 +12,7 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
 
 ![Truss Calculator CI](https://github.com/lorcan2440/Simple-Truss-Calculator/actions/workflows/main.yml/badge.svg)
 [![HitCount](https://hits.dwyl.com/lorcan2440/Simple-Truss-Calculator.svg?style=flat-square)](http://hits.dwyl.com/lorcan2440/Simple-Truss-Calculator)
+[![Coverage Status](https://coveralls.io/repos/github/lorcan2440/Simple-Truss-Calculator/badge.svg?branch=main)](https://coveralls.io/github/lorcan2440/Simple-Truss-Calculator?branch=main)
 
 ## To-do List and Future Aims
 
