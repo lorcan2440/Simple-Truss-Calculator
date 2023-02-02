@@ -2,7 +2,7 @@
 Simple Truss Calculator
 
 Source:     https://github.com/lorcan2440/Simple-Truss-Calculator
-Tests:      test_truss.py
+Tests:      tests/test_truss.py
 
 Calculator and interactive program for finding internal/reaction forces in a
 pin-jointed, straight-membered, plane truss.
