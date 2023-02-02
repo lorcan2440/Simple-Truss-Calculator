@@ -23,19 +23,19 @@ jobs:
           pip install black flake8 pytest pytest-cov
 
       - name: Format with black
-        run: black Source
+        run: black src
 
       - name: Lint with flake8
         run: flake8 --statistics
 
       - name: Run unit tests with pytest and code coverage with coverage.py
-        run: pytest Source/tests -v --cov=Source/ --cov-report lcov:Source/tests/lcov.info
+        run: pytest src/tests -v --cov=src/ --cov-report lcov:src/tests/lcov.info
 
       - name: Upload Coverage Results
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.github_token }}
-          path-to-lcov: Source/tests/lcov.info
+          path-to-lcov: src/tests/lcov.info
 
 
 #- name: Run deliverables (tasks)
