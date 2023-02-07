@@ -2,16 +2,47 @@
 
 ![Example Truss used in SDC](Media/GitHub/example_screenshot.png)
 
-Calculator with display for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss.
+Calculator with display for finding internal/reaction forces, stresses and strains of a pin-jointed, straight-membered, plane truss. Assumes linear elasticity and small deflections.
 
-100% Python; intended for personal use only but documented as a module.
-Soon I hope to make it more user-friendly and interactive.
-See `src/truss.py` for the program.
+100% Python. See `src/truss.py` for the program.
 
-Assumes linear elasticity and small deflections: I will *not* be implementing plastic behaviour or FEA to keep it *simple*.
 
 ![Truss Calculator CI](https://github.com/lorcan2440/Simple-Truss-Calculator/actions/workflows/main.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/lorcan2440/Simple-Truss-Calculator/badge.svg)](https://coveralls.io/github/lorcan2440/Simple-Truss-Calculator?branch=master)
+
+## How to use
+
+### Installation
+
+Copy the `src/truss.py` file into your working directory.
+
+### Usage example
+
+```
+from truss import Result, init_truss, plot_diagram
+
+# initialise Truss object
+my_truss = init_truss('My first truss')
+
+# set the (x, y) locations of the joints - places where bars, loads or supports can be placed
+my_truss.add_joints([(0, 0), (290, -90), (815, 127.5), (290, 345), (0, 255), (220.836, 127.5)])
+
+# join some joints together with bars - joints are named 
+# 'A', 'B', 'C', ... automatically in the order they were listed
+my_truss.add_bars(['AB', 'BC', 'CD', 'DE', 'EF', 'AF', 'DF', 'BF'])
+
+# add some loads
+my_truss.add_loads([('W', 'C', 0, -0.675)])
+my_truss.add_supports([('A', 'encastre'), ('E', 'pin', -math.pi / 2)])
+
+# compute results of loading (forces etc)
+results = Result(my_truss)
+
+# show in a matplotlib diagram
+plot_diagram(my_truss, results)
+```
+
+For more detailed examples, see the complete test cases (`src/tests/test_truss.py`).
 
 ## To-do List and Future Aims
 
@@ -30,9 +61,6 @@ Assumes linear elasticity and small deflections: I will *not* be implementing pl
 
 ### Implement truss optimisation
 
-## Notes
-
-Code is linted with `flake8`. Testing is done (currently) with the built-in `unittest`.
 
 
 ## Why I made this
