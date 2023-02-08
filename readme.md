@@ -31,8 +31,10 @@ my_truss.add_joints([(0, 0), (290, -90), (815, 127.5), (290, 345), (0, 255), (22
 # 'A', 'B', 'C', ... automatically in the order they were listed
 my_truss.add_bars(['AB', 'BC', 'CD', 'DE', 'EF', 'AF', 'DF', 'BF'])
 
-# add some loads
+# add a load at the named joint
 my_truss.add_loads([('W', 'C', 0, -0.675)])
+
+# add two supports at the named joints
 my_truss.add_supports([('A', 'encastre'), ('E', 'pin', -math.pi / 2)])
 
 # compute results of loading (forces etc)
