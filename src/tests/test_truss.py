@@ -214,8 +214,7 @@ def test_truss_semi_lazy_creation():
 
     t = init_truss("BTEC Bridge")
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
-    r = Result(t)
-    plot_diagram(t, r)
+    t.solve_and_plot()
 
 
 def test_truss_very_lazy_creation_with_multiple_steps():
@@ -284,8 +283,7 @@ def test_truss_very_lazy_creation_with_multiple_steps():
     extra_bars = (("JB", bar_params), ("KD",))
     t.add_bars(extra_bars)
 
-    r = Result(t)
-    plot_diagram(t, r)
+    t.solve_and_plot()
 
 
 def test_build_large_bridge_with_angled_roller():
@@ -326,8 +324,7 @@ def test_build_large_bridge_with_angled_roller():
 
     t = init_truss("Big Bridge")
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
-    r = Result(t)
-    plot_diagram(t, r)
+    t.solve_and_plot()
 
 
 def test_small_arch():
@@ -339,9 +336,7 @@ def test_small_arch():
 
     t = init_truss("Triangle")
     t.add_joints(joints).add_bars(bars).add_loads(loads).add_supports(supports)
-
-    r = Result(t)
-    plot_diagram(t, r)
+    t.solve_and_plot()
 
 
 def test_irregular_truss():
@@ -542,8 +537,7 @@ def test_unloaded():
     bars = ("AB", "BC")
     supports = (("A", "pin"), ("C", "pin"))
     t = init_truss().add_joints(joints).add_bars(bars).add_supports(supports)
-    r = Result(t)
-    plot_diagram(t, r)
+    t.solve_and_plot()
 
 
 def test_bad_inputs():

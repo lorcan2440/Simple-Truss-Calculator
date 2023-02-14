@@ -1013,6 +1013,13 @@ class Truss:
         # Return the values in dict form
         return output_dict
 
+    def solve_and_plot(self, **kwargs):
+        '''
+        Solves a built truss for its forces, then shows it on a matplotlib plot.
+        '''
+        result = Result(self, **kwargs)
+        plot_diagram(self, result, **kwargs)
+
     def classify_error_in_truss(self, e: np.linalg.LinAlgError) -> None:
 
         """
