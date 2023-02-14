@@ -287,19 +287,7 @@ class Result:
         from the calculate() function.
         """
 
-        # any forces smaller than `SMALL_NUM` will be set to zero (assumed to be due to rounding
-        # errors in the solver function). Currently set to 10 times smaller than the least
-        # significant digit of the smallest internal force value.
-        # NOTE: maybe move this functionality into `round_data()`.
-        SMALL_NUM = (
-            0.1
-            * 10 ** (-1 * self.sig_figs)
-            * min(
-                [abs(f) for f in self.results.values() if isinstance(f, (float, int))]
-            )
-        )
-
-        zero_if_small = lambda x: x if abs(x) > SMALL_NUM else 0  # noqa
+        zero_if_small = lambda x: x if abs(x) > 1e-9 else 0  # noqa
 
         for item in self.results:
             if isinstance(self.results[item], float) and item in truss.bars:
@@ -335,14 +323,6 @@ class Result:
                             )
                         }
                     )
-
-            else:
-                warnings.warn(
-                    f"""A result appears to have been formed incorrectly. This is an internal
-                    error. Bad value ignored: {self.results[item]}""",
-                    RuntimeWarning,
-                )
-                continue
 
 
 # MAIN CLASS FOR TRUSSES
