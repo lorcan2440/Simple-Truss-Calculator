@@ -6,6 +6,8 @@ import os
 import math
 import warnings
 from matplotlib import pyplot as plt
+import matplotlib as mpl
+import sigfig
 from typing import Hashable, Optional
 from enum import Enum, unique
 
@@ -15,6 +17,15 @@ if os.path.basename(__file__).endswith(".exe"):
     warnings.filterwarnings(
         "ignore", "(?s).*MATPLOTLIBDATA.*", category=UserWarning
     )  # deprecation warning inherits from UserWarning
+
+# some default values. symbols defined on databook pg. 8
+DEFAULT_BAR_PARAMS = {
+    "b": 0.016,  # 16 mm
+    "t": 0.004,  # 4 mm
+    "D": 0.020,  # 2 cm
+    "E": 210e9,  # 210 GPa
+    "strength_max": 240e6,  # 240 MPa
+}  # in (N, m)
 
 
 @unique
@@ -127,7 +138,7 @@ def set_matplotlib_fullscreen() -> None:
             mgr.resize(*mgr.window.maxsize())
     elif backend == "wxAgg":
         mgr.frame.Maximize(True)
-    elif backend in ["Qt4Agg", "Qt5Agg", "QtAgg"]:  # used if PyQt5 is installed
+    elif "Qt" in backend:  # used if PyQt5 is installed
         mgr.window.showMaximized()
     else:
         raise RuntimeWarning(
@@ -402,3 +413,101 @@ def draw_support(
                 (xtl[17], ytl[17]), size / 14, color="white", linewidth=1, zorder=1
             )
         )
+
+
+def get_safety_factor(bar: object, bar_force: float, **kwargs) -> tuple[float, str]:
+
+    bar_area = bar.effective_area  # mm^2
+    bar_stress = bar_force / bar_area  # kN mm^-2 = GPa
+    bar_length = bar.length
+    yield_limit_stress = bar.params["strength_max"]
+
+    if bar_force > 0:
+        # tension: check for yielding
+        if bar_stress >= yield_limit_stress:
+            warnings.warn(
+                f"Bar {bar.name} is expected to have yielded in tension: "
+                f"bar stress {bar_stress}, yield stress {yield_limit_stress}",
+                UserWarning,
+            )
+
+    elif bar_force < 0:
+        # compression: check for crushing or buckling
+        eta = 0.003 * bar.buckling_ratio  # Robertson, 1925, EN 1993
+
+        joint_1_type = getattr(
+            bar.truss.get_support_by_joint(bar.first_joint), "support_type", "pin"
+        )
+        joint_2_type = getattr(
+            bar.truss.get_support_by_joint(bar.second_joint), "support_type", "pin"
+        )
+
+        match [joint_1_type, joint_2_type]:
+            case ["encastre", "encastre"]:
+                l_eff = 0.5 * bar_length
+            case ["encastre", "pin"] | ["pin", "encastre"]:
+                l_eff = 0.7 * bar_length
+            case ["encastre", "roller"] | ["roller", "encastre"]:
+                l_eff = 2.0 * bar_length
+            case _:
+                l_eff = 1.0 * bar_length
+
+        euler_stress = (
+            np.pi**2 * bar.params["E"] / (l_eff / bar.radius_of_gyration) ** 2
+        )
+        yield_limit_stress = min(
+            bar.params["strength_max"],
+            (1 + eta) * euler_stress
+            + yield_limit_stress
+            - np.sqrt(
+                ((1 + eta) * euler_stress + yield_limit_stress) ** 2
+                - 4 * euler_stress * yield_limit_stress
+            )
+            / 2,
+        )
+
+        if abs(bar_stress) >= yield_limit_stress:
+            if yield_limit_stress == bar.params["strength_max"]:
+                warnings.warn(
+                    f"Bar {bar.name} is expected to have yielded in compression (crushing): "
+                    f"bar stress {bar_stress}, yield stress {-1 * yield_limit_stress}",
+                    UserWarning,
+                )
+            elif yield_limit_stress < bar.params["strength_max"]:
+                warnings.warn(
+                    f"Bar {bar.name} is expected to have failed by buckling: "
+                    f"bar stress {bar_stress}, critical stress {-1 * yield_limit_stress}",
+                    UserWarning,
+                )
+
+    try:
+        safety_factor = sigfig.sigfig.round(
+            yield_limit_stress / abs(bar_stress), **kwargs
+        )
+    except ZeroDivisionError:
+        safety_factor = float(np.inf)
+
+    return safety_factor
+
+
+def get_colour_from_sf(sf: float):
+    if sf <= 1:
+        x = 0
+    elif sf >= 2:
+        x = 1
+    else:
+        x = sf - 1
+    return mpl.colors.hsv_to_rgb((0.3 * x, 0.75, 0.75))
+
+
+def round_sigfig(num: float | list[float], sig_figs: int):
+    if num in (float("inf"), float("-inf")):
+        return num
+    else:
+        if sig_figs is not None:
+            if isinstance(num, (list, tuple)):
+                return type(num)([sigfig.round(x, sigfigs=sig_figs) for x in num])
+            else:
+                return float(sigfig.round(num, sigfigs=sig_figs))
+        else:
+            return num
