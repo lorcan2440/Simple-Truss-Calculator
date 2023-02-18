@@ -37,11 +37,12 @@ my_truss.add_loads([('W', 'C', 0, -0.675)])
 # add two supports at the named joints
 my_truss.add_supports([('A', 'encastre'), ('E', 'pin', -math.pi / 2)])
 
-# compute results of loading (forces etc)
-results = Result(my_truss)
+# solve and plot
+my_truss.solve_and_plot()
 
-# show in a matplotlib diagram
-plot_diagram(my_truss, results)
+# get results in text form
+results = Result(my_truss)
+print(results)
 ```
 
 For more detailed examples, see the complete test cases (`src/tests/test_truss.py`).
