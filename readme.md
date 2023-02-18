@@ -18,7 +18,7 @@ Copy the `src/truss.py` file into your working directory.
 
 ### Usage example
 
-```
+```python
 from truss import Result, init_truss, plot_diagram
 
 # initialise Truss object
