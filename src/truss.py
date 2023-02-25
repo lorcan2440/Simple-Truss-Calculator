@@ -4,7 +4,7 @@ Simple Truss Calculator
 Source:     https://github.com/lorcan2440/Simple-Truss-Calculator
 Tests:      tests/test_truss.py
 
-Calculator and interactive program for finding internal/reaction forces in a
+Calculator for finding internal/reaction forces in a
 pin-jointed, straight-membered, plane truss.
 """
 
@@ -16,14 +16,15 @@ import json
 import re
 import os
 
-import utils
+# local imports
+import utils_truss
 
-# auto install missing modules, least likely to be already installed first
-from matplotlib import pyplot as plt  # to display graphical output
-import numpy as np  # to do matrix operations
+# external modules
+from matplotlib import pyplot as plt  # $ pip install matplotlib
+import numpy as np  # $ pip install numpy
 
 
-# PARTS OF THE TRUSS (INNER CLASSES)
+# PARTS OF THE TRUSS
 
 
 class Joint:
@@ -301,7 +302,7 @@ class Result:
                 self.buckling_ratios.update({item: truss.bars[item].buckling_ratio})
                 self.safety_factors.update(
                     {
-                        item: utils.get_safety_factor(
+                        item: utils_truss.get_safety_factor(
                             truss.bars[item], self.tensions[item]
                         )
                     }
@@ -369,7 +370,7 @@ class Truss:
 
         self.name = kwargs.get("name", "My Truss")
         self.units = kwargs.get(
-            "units", (utils.Unit.KILONEWTONS, utils.Unit.MILLIMETRES)
+            "units", (utils_truss.Unit.KILONEWTONS, utils_truss.Unit.MILLIMETRES)
         )
 
         self.joints = dict()
@@ -378,12 +379,12 @@ class Truss:
         self.supports = dict()
 
         if isinstance(self.units, str):
-            force_unit = utils.Unit(self.units.split()[0].strip())
-            length_unit = utils.Unit(self.units.split()[1].strip())
+            force_unit = utils_truss.Unit(self.units.split()[0].strip())
+            length_unit = utils_truss.Unit(self.units.split()[1].strip())
             self.units = (force_unit, length_unit)
 
         self.default_params = (
-            utils.DEFAULT_BAR_PARAMS.copy()
+            utils_truss.DEFAULT_BAR_PARAMS.copy()
             if kwargs.get("bar_params", None) is None
             else kwargs.get("bar_params")
         )
@@ -391,11 +392,11 @@ class Truss:
         if kwargs.get("bar_params", None) is None:
 
             # some default values. symbols defined on databook pg. 8
-            self.default_params = utils.DEFAULT_BAR_PARAMS.copy()
-            if self.units[0] is utils.Unit.KILONEWTONS:
+            self.default_params = utils_truss.DEFAULT_BAR_PARAMS.copy()
+            if self.units[0] is utils_truss.Unit.KILONEWTONS:
                 self.default_params["E"] *= 1e-3
                 self.default_params["strength_max"] *= 1e-3
-            if self.units[1] is utils.Unit.MILLIMETRES:
+            if self.units[1] is utils_truss.Unit.MILLIMETRES:
                 self.default_params["b"] *= 1e3
                 self.default_params["t"] *= 1e3
                 self.default_params["D"] *= 1e3
@@ -523,7 +524,7 @@ class Truss:
             # Input type 3): expect input of the form (x, y) - auto generate names
             existing_num = len(self.joints.keys())
             for s, info in zip(
-                utils.iter_all_strings(start=existing_num), list_of_joints
+                utils_truss.iter_all_strings(start=existing_num), list_of_joints
             ):
                 self.joints[s] = Joint(self, s, *info)
 
@@ -1310,7 +1311,9 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
         norm = math.radians(rot + 90)
 
         if colour_coding_by_stress_limit:
-            bar_colour = utils.get_colour_from_sf(results.safety_factors[bar.name])
+            bar_colour = utils_truss.get_colour_from_sf(
+                results.safety_factors[bar.name]
+            )
         else:
             bar_colour = (
                 "#FF0000"
@@ -1324,7 +1327,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
                 [bar.first_joint.x, bar.second_joint.x],
                 [bar.first_joint.y, bar.second_joint.y],
                 color=bar_colour,
-                label=f"{bar.name}: FoS = {utils.round_sigfig(results.safety_factors[bar.name], sig_figs)}",
+                label=f"{bar.name}: FoS = {utils_truss.round_sigfig(results.safety_factors[bar.name], sig_figs)}",
                 zorder=0,
             )
             # label bar with its name
@@ -1343,7 +1346,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
             plt.text(
                 (bar.first_joint.x + bar.second_joint.x) / 2 - LEN / 3 * math.cos(norm),
                 (bar.first_joint.y + bar.second_joint.y) / 2 - LEN / 3 * math.sin(norm),
-                str(utils.round_sigfig(results.tensions[bar.name], sig_figs))
+                str(utils_truss.round_sigfig(results.tensions[bar.name], sig_figs))
                 + " "
                 + truss.units[0].value,
                 ha="center",
@@ -1360,7 +1363,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
                 [bar.first_joint.y, bar.second_joint.y],
                 label=bar.name
                 + ": "
-                + str(utils.round_sigfig(results.tensions[bar.name], sig_figs))
+                + str(utils_truss.round_sigfig(results.tensions[bar.name], sig_figs))
                 + " "
                 + truss.units[0].value,
                 color=bar_colour,
@@ -1389,7 +1392,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
             markersize=0,
             label=support.name
             + ": "
-            + str(utils.round_sigfig(results.reactions[support.name], sig_figs))
+            + str(utils_truss.round_sigfig(results.reactions[support.name], sig_figs))
             + " "
             + truss.units[0].value,  # noqa \
         )
@@ -1414,10 +1417,12 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
 
         # TODO: if there is another support at this `support.joint`,
         # label it at an angle of `180 + pin_rotation` instead
-        label_angle = utils.find_free_space_around_joint(
+        label_angle = utils_truss.find_free_space_around_joint(
             support.joint, results, truss=truss, show_reactions=show_reactions
         )
-        rounded_val = utils.round_sigfig(results.reactions[support.name], sig_figs)
+        rounded_val = utils_truss.round_sigfig(
+            results.reactions[support.name], sig_figs
+        )
         plt.text(
             support.joint.x + 0.9 * LEN * math.cos(label_angle),
             support.joint.y + 0.9 * LEN * math.sin(label_angle),
@@ -1430,7 +1435,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
         # draw a icon-like symbol representing the type of support
         # TODO: maybe make this into a matplotlib patch to use it in the legend
 
-        utils.draw_support(
+        utils_truss.draw_support(
             support.joint.x,
             support.joint.y,
             LEN * 0.9,
@@ -1453,7 +1458,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
         )
 
         # TODO: if there is another load at this `load.joint`, label it at the arrow midpoint + normal a bit
-        label_angle = utils.find_free_space_around_joint(
+        label_angle = utils_truss.find_free_space_around_joint(
             load.joint, results=results, truss=truss
         )
         plt.text(
@@ -1487,7 +1492,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
     ax.yaxis.label.set_color(AXES_COLOUR)
 
     if full_screen:
-        utils.set_matplotlib_fullscreen()
+        utils_truss.set_matplotlib_fullscreen()
 
     plt.show()
 
@@ -1513,7 +1518,10 @@ def load_truss_from_json(
         truss = init_truss(
             t_attr["name"],
             t_attr["default_bar_params"],
-            (utils.Unit(t_attr["units"][0]), utils.Unit(t_attr["units"][1])),
+            (
+                utils_truss.Unit(t_attr["units"][0]),
+                utils_truss.Unit(t_attr["units"][1]),
+            ),
         )
 
         truss.add_joints(f["joints"])
@@ -1555,7 +1563,7 @@ def init_truss(
 
     truss_name = truss_name or "My Truss"
     bar_params = bar_params
-    units = units or (utils.Unit.KILONEWTONS, utils.Unit.MILLIMETRES)
+    units = units or (utils_truss.Unit.KILONEWTONS, utils_truss.Unit.MILLIMETRES)
 
     return Truss(name=truss_name, bar_params=bar_params, units=units, **kwargs)
 
