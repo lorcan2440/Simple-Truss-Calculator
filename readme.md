@@ -14,7 +14,7 @@ Calculator with display for finding internal/reaction forces, stresses and strai
 
 ### Installation
 
-Copy the `src/truss.py` file into your working directory.
+Copy the `src/truss.py` and `src/utils.py` files into your working directory.
 
 ### Usage example
 
