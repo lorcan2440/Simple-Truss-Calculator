@@ -1327,7 +1327,8 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
                 [bar.first_joint.x, bar.second_joint.x],
                 [bar.first_joint.y, bar.second_joint.y],
                 color=bar_colour,
-                label=f"{bar.name}: FoS = {utils_truss.round_sigfig(results.safety_factors[bar.name], sig_figs)}",
+                label=f"""{bar.name}: FoS = {utils_truss.round_sigfig(
+                    results.safety_factors[bar.name], sig_figs)}""",
                 zorder=0,
             )
             # label bar with its name

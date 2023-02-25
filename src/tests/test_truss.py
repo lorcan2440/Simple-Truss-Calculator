@@ -1,7 +1,7 @@
 if __name__ == "__main__":
     import __init__  # noqa
 
-from truss import Result, init_truss, plot_diagram, load_truss_from_json, BadTrussError
+from truss import Result, init_truss, BadTrussError
 import pytest
 import numpy as np
 
