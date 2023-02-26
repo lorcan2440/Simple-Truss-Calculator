@@ -277,10 +277,7 @@ class Result:
         repr_str += f"\n Strains are: \n \t {str(self.strains)}"
         repr_str += f"\n Buckling ratios are: \n \t {str(self.buckling_ratios)}"
         repr_str += f"\n Safety factors are: \n \t {str(self.safety_factors)}"
-        repr_str += (
-            f"\n\n Units are {self.truss.units[0].value}, values "
-            f'{f"not rounded" if self.sig_figs is None else f"rounded to {self.sig_figs} s.f."}'
-        )
+        repr_str += f"\n\n Units are {self.truss.units[0].value}, values "
         return repr_str
 
     def get_data(self, truss: object) -> None:

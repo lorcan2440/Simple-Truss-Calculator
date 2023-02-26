@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """
 Adds source files to path to allow access without installing package.
 """

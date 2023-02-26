@@ -1,7 +1,7 @@
 if __name__ == "__main__":
     import __init__  # noqa
 
-from truss import Result, init_truss, BadTrussError
+from truss import Result, init_truss, BadTrussError, Joint, Bar
 import pytest
 import numpy as np
 
@@ -90,11 +90,17 @@ def __test_determinate_but_internally_singular_truss():
 
 def test_unloaded():
 
+    # build and solve a valid unloaded truss
     joints = ((0, 0), (1, 0.75), (2, 0))
     bars = ("AB", "BC")
     supports = (("A", "pin"), ("C", "pin"))
     t = init_truss().add_joints(joints).add_bars(bars).add_supports(supports)
     t.solve_and_plot()
+
+    # simple test string representation
+    r = Result(t)
+    repr = r.__repr__()  # could not get capsys fixture to work to check print() to STDOUT
+    assert len(repr) > 0
 
 
 def test_bad_inputs():
@@ -115,6 +121,14 @@ def test_bad_inputs():
     bars = (("Bar AB",), ("BC", {"b": 50}))
     with pytest.raises(ValueError, match=r"Lazily evaluated bar names"):
         t = init_truss().add_joints(joints).add_bars(bars)
+    
+    # connect two joints in different trusses - cannot do this using builder functions
+    t_A = init_truss('Truss A')
+    t_B = init_truss('Truss B')
+    j1 = Joint(t_A, 'A', 10, 0)
+    j2 = Joint(t_B, 'B', 0, 10)
+    with pytest.raises(BadTrussError, match=r"Bars must connect two joints in the same truss"):
+        t_A.bars.update({'AB': Bar('AB', j1, j2)})
 
     # total nonsense
     joints = "lalala"

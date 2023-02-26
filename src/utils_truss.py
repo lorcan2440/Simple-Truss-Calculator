@@ -12,12 +12,6 @@ from typing import Hashable, Optional
 from enum import Enum, unique
 
 
-#  Fix issue with warning appearing when run from .exe
-if os.path.basename(__file__).endswith(".exe"):
-    warnings.filterwarnings(
-        "ignore", "(?s).*MATPLOTLIBDATA.*", category=UserWarning
-    )  # deprecation warning inherits from UserWarning
-
 # some default values. symbols defined on databook pg. 8
 DEFAULT_BAR_PARAMS = {
     "b": 0.016,  # 16 mm
@@ -62,69 +56,13 @@ def iter_all_strings(start: int = 0):
             yield "".join(s)
 
 
-def convert_to_valid_var_name(name: str, cls: object, allow_existing_vars=True) -> str:
-
-    """
-    Given a user-defined name, converts it to a similar looking valid variable name.
-    e.g. `convert_to_valid_var_name("My First Truss")` -> "my_first_truss"
-    If this already exists and `allow_existing_vars = False`, a number is appended to the name
-    to make it distinct, e.g. "my_first_truss_2", "my_first_truss_3", etc.
-    """
-
-    if name in {"", None}:
-        name = ""
-
-    # remove trailing whitespace, convert to lowercase and replace spaces with underscores
-    new_name = name.strip().upper().replace(" ", "_")
-
-    # remove non-alphanumeric characters except underscores
-    pattern = re.compile(r"[\W]+", re.UNICODE)
-    new_name = pattern.sub("", new_name)
-
-    if not allow_existing_vars:
-        if new_name == "":  # if given name is blank, iterate through alphabet
-            for s in iter_all_strings():
-                if s not in cls.keys():
-                    new_name = s
-        elif (
-            not allow_existing_vars and new_name in cls.keys()
-        ):  # if not, add _number to end
-            suffix = 2
-            while (new_name + "_" + str(suffix)) in cls.keys():
-                suffix += 1
-
-    return new_name
-
-
-def get_constants(cls: type) -> dict[str, Hashable]:
-
-    """
-    Used to get a dict of constants {const_name: const_value}
-    from the utility classes.
-    """
-
-    # get a list of the names of the constants
-    names = list(
-        filter(
-            lambda a: not callable(getattr(cls(), a))
-            and not a.startswith("_")
-            and a == a.upper(),
-            dir(cls()),
-        )
-    )
-
-    # get a list of the values of these constants
-    vals = [getattr(cls(), a) for a in names]
-
-    # return in dict {'name': value} form
-    return dict(zip(names, vals))
-
-
-def set_matplotlib_fullscreen() -> None:
+def set_matplotlib_fullscreen() -> None:  # pragma: no cover
 
     """
     Automatically set the matplotlib output to fullscreen.
     """
+
+    # this cannot be tested - the test environment does not have any of these backends.
 
     import os
     from matplotlib import pyplot as plt
