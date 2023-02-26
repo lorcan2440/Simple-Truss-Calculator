@@ -1,14 +1,13 @@
 import numpy as np
 import itertools
 import string
-import re
 import os
 import math
 import warnings
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import sigfig
-from typing import Hashable, Optional
+from typing import Optional
 from enum import Enum, unique
 
 
@@ -64,7 +63,6 @@ def set_matplotlib_fullscreen() -> None:  # pragma: no cover
 
     # this cannot be tested - the test environment does not have any of these backends.
 
-    import os
     from matplotlib import pyplot as plt
 
     backend = str(plt.get_backend())
