@@ -45,7 +45,7 @@ results = Result(my_truss)
 print(results)
 ```
 
-For more detailed examples, see the complete test cases (`src/tests/test_truss.py`).
+For more detailed examples, see the complete test cases (`src/tests/test_complete_examples.py`).
 
 ## To-do List and Future Aims
 
