@@ -464,3 +464,8 @@ def test_save_and_load_json_truss():
     assert r.truss.results["tensions"] == pytest.approx(
         _r_new.results["tensions"], 1e-9
     )
+
+
+def test_util_build():
+    t, r = build_sdc_truss()
+    plot_diagram(t, r)

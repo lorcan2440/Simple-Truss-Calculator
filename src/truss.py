@@ -1292,6 +1292,7 @@ def plot_diagram(truss: Truss, results: Result, **kwargs) -> None:
     )
 
     plt.cla()
+    plt.grid(False)
 
     plt.plot(_xjl, _yjl, "o", color="black", markersize=5)
     plt.plot(
